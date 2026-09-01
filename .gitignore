@@ -13,6 +13,7 @@ logs/
 chat-history/
 .sync-list.json
 appsettings.json
+publish-test/
 
 # jieba.NET 词典资源（构建时自动从 NuGet 包复制）
 jieba-resources/
