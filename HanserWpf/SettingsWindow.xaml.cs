@@ -20,6 +20,7 @@ public partial class SettingsWindow : Window
         LoadUserDict();
         LoadUpdateSource();
         LoadAbout();
+        AutoCheckUpdateCheck.IsChecked = AppSettings.Load().AutoCheckUpdate;
     }
 
     /// <summary>关于页点击「检查更新」后为 true，主窗口据此触发更新流程。</summary>
@@ -138,6 +139,9 @@ public partial class SettingsWindow : Window
             }
             GitHubSync.SaveConfig(new GitHubSync.Config { Url = repoUrl });
         }
+
+        // 保存应用设置（启动自动检查更新开关）
+        AppSettings.Save(new AppSettings { AutoCheckUpdate = AutoCheckUpdateCheck.IsChecked == true });
 
             wait.Close();
             AppDialog.Info(this,

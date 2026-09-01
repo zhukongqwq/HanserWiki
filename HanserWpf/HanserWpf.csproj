@@ -5,6 +5,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 版本信息文件复制进输出目录（关于页与版本检查读取） -->
+    <None Include="..\version.json" Link="version.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
   </ItemGroup>
 

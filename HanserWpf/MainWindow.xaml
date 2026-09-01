@@ -255,8 +255,8 @@
                                 Click="ImportButton_Click"/>
                         <Button x:Name="CountButton" Content="库统计" Style="{StaticResource SecondaryButton}"
                                 Margin="8,0,0,0" Click="CountButton_Click"/>
-                        <Button x:Name="UpdateButton" Content="检查更新" Style="{StaticResource SecondaryButton}"
-                                Margin="8,0,0,0" ToolTip="从配置的 GitHub 仓库增量拉取文档"
+                        <Button x:Name="UpdateButton" Content="文档更新" Style="{StaticResource SecondaryButton}"
+                                Margin="8,0,0,0" ToolTip="从配置的更新源增量拉取 docx（list.json 清单）"
                                 Click="UpdateButton_Click"/>
                         <Button x:Name="SettingsButton" Content="设置" Style="{StaticResource SecondaryButton}"
                                 Margin="8,0,0,0" Click="SettingsButton_Click"/>

@@ -6,7 +6,7 @@ namespace Hanser.Core;
 /// <summary>项目路径解析：C# 版复用 Python 目录下的数据（data / documents.db / userdict.txt）。</summary>
 public static class Paths
 {
-    /// <summary>向上搜索含 Python 目录的项目根（AI Hanser 根目录）。</summary>
+    /// <summary>向上搜索含 Python 目录的项目根（开发环境）；发布版无 Python 目录时回退到程序目录。</summary>
     public static string Root
     {
         get
@@ -18,7 +18,8 @@ public static class Paths
                     return dir.FullName;
                 dir = dir.Parent;
             }
-            throw new DirectoryNotFoundException("未找到项目根目录（应包含 Python/ 目录）");
+            // 分发版：数据/词库/配置均在 exe 所在目录
+            return AppContext.BaseDirectory.TrimEnd('\\', '/');
         }
     }
 

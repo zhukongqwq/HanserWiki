@@ -144,6 +144,50 @@ public partial class MainWindow : Window
         LoadChatHistory();
         MainTabs.SelectedIndex = 0; // 默认 AI 问答（聊天）界面
         StartIncrementalScan();
+        // 启动自动检查应用版本更新（设置开关开启时）
+        if (AppSettings.Load().AutoCheckUpdate)
+            _ = CheckAppVersionAsync(silentOnNoUpdate: true);
+    }
+
+    /// <summary>检查应用版本更新（从 HanserWiki 拉取 version.json 比对）；有新版本时提示并可跳转 Release。</summary>
+    private async Task CheckAppVersionAsync(bool silentOnNoUpdate)
+    {
+        // 镜像前缀复用更新源配置（若配置了仓库地址）
+        var cfg = GitHubSync.LoadConfig();
+        var proxy = string.IsNullOrEmpty(cfg.Url) ? "" : GitHubSync.ParseUrl(cfg.Url).Proxy;
+        var (hasUpdate, local, remote) = await AppUpdate.CheckAsync(proxy);
+        if (hasUpdate)
+        {
+            AppendGlobalLog($"[版本] 发现新版本 {remote}（当前 {local}）");
+            if (AppDialog.Confirm(this, $"发现新版本 v{remote}（当前 v{local}）。\n是否前往 GitHub Releases 下载？", "发现新版本"))
+                OpenBrowser(AppUpdate.ReleaseUrl);
+        }
+        else if (!silentOnNoUpdate)
+        {
+            if (remote.Length == 0)
+            {
+                AppendGlobalLog("[版本] 检查更新失败（网络问题或仓库不可达）");
+                AppDialog.Info(this, "检查更新失败：无法获取版本信息（网络问题或仓库不可达）。", "检查更新");
+            }
+            else
+            {
+                AppendGlobalLog($"[版本] 已是最新版本（{local}）");
+                AppDialog.Info(this, $"已是最新版本（v{local}）。", "检查更新");
+            }
+        }
+    }
+
+    /// <summary>用系统浏览器打开链接。</summary>
+    private static void OpenBrowser(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch
+        {
+            // 打开失败静默忽略
+        }
     }
 
     /// <summary>启动后台静默增量扫描：只处理新增/变更文档，完成后刷新计数（无感，不打扰）。</summary>
@@ -595,7 +639,7 @@ public partial class MainWindow : Window
         win.ShowDialog();
         RefreshChatList(_currentChatPath); // 设置中可能清空/重命名了对话，刷新历史列表
         if (win.CheckUpdateRequested)
-            UpdateButton_Click(this, new RoutedEventArgs()); // 关于页触发的检查更新
+            _ = CheckAppVersionAsync(silentOnNoUpdate: false); // 关于页触发的版本检查
     }
 
     // ---------- 聊天：AI 问答（hanser 流式） ----------
