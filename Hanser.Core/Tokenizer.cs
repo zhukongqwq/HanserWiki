@@ -24,8 +24,9 @@ public static class Tokenizer
 
     private static readonly Lazy<JiebaSegmenter> SegmenterLazy = new(() =>
     {
-        // jieba.NET 的词典/HMM 模型资源目录（构建时由 Directory.Build.targets 从 NuGet 包复制）
-        var resourcesDir = Path.Combine(Paths.Root, "HanserWpf", "jieba-resources");
+        // jieba.NET 的词典/HMM 模型资源目录（构建时由 Directory.Build.targets 从 NuGet 包复制；
+        // 开发环境在 HanserWpf/jieba-resources，发布版在 exe 旁 jieba-resources）
+        var resourcesDir = Path.Combine(Paths.WpfRoot, "jieba-resources");
         if (Directory.Exists(resourcesDir))
             ConfigManager.ConfigFileBaseDir = resourcesDir;
         var segmenter = new JiebaSegmenter();

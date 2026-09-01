@@ -1,6 +1,6 @@
 name: 构建与发布
 
-# 推送 main 自动构建验证；手动触发或推送 v* 标签时构建并发布
+# 推送 main 自动构建验证并发布；手动触发或推送 v* 标签同样构建并发布
 on:
   workflow_dispatch:
   push:
@@ -21,9 +21,6 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: 发布单文件 exe（win-x64 自包含）
-        run: dotnet publish HanserWpf/HanserWpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist
-
       - name: 读取版本号与更新日志（来自 version.json）
         id: version
         shell: pwsh
@@ -39,13 +36,26 @@ jobs:
           $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+      - name: 发布（win-x64 自包含，非单文件）
+        run: dotnet publish HanserWpf/HanserWpf.csproj -c Release -r win-x64 --self-contained true -o dist
+
+      - name: 复制 jieba 词典到发布目录（运行时分词需要）
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse -Force jieba-resources dist/
+
+      - name: 打包 zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/* -DestinationPath "Hanser-AI-Wiki-v${{ steps.version.outputs.version }}.zip" -Force
+
       - name: 创建 Release（自动同步版本号与更新日志）
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Hanser AI Wiki v${{ steps.version.outputs.version }}
           body: ${{ steps.version.outputs.body }}
-          files: dist/*.exe
+          files: Hanser-AI-Wiki-v${{ steps.version.outputs.version }}.zip
           draft: false
           prerelease: false
           update_release_body: true # 同版本重复推送时更新 Release 而非失败
