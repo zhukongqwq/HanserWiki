@@ -750,34 +750,37 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// 流程状态：以打字机小气泡出现在聊天流（用户问题之后），
-    /// 切换时旧气泡淡出消失、新气泡淡入并逐字打出；text 为 null 时仅淡出移除。
+    /// 切换时旧气泡立即移除、新气泡淡入并逐字打出；text 为 null 时仅移除。
+    /// 同步移除（不做淡出动画回调），避免最小化/快速切换时回调交错导致气泡残留。
     /// </summary>
     private void SetFlowStatus(string? text)
     {
         _flowToken++; // 取消进行中的打字
-        FadeOutFlowBubble(() =>
+        // 同步移除旧流程气泡
+        if (_flowBubble != null)
         {
+            _chatItems.Remove(_flowBubble);
             _flowBubble = null;
-            if (text == null)
+        }
+        if (text == null)
+            return;
+        var bubble = ChatMessageVm.Flow("");
+        _flowBubble = bubble;
+        _chatItems.Add(bubble);
+        ScrollChatToEnd();
+        // 等容器生成后淡入
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            if (_flowBubble != bubble)
                 return;
-            var bubble = ChatMessageVm.Flow("");
-            _flowBubble = bubble;
-            _chatItems.Add(bubble);
-            ScrollChatToEnd();
-            // 等容器生成后淡入
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            if (ChatItems.ItemContainerGenerator.ContainerFromItem(bubble) is FrameworkElement fc)
             {
-                if (_flowBubble != bubble)
-                    return;
-                if (ChatItems.ItemContainerGenerator.ContainerFromItem(bubble) is FrameworkElement fc)
-                {
-                    fc.Opacity = 0.1;
-                    fc.BeginAnimation(UIElement.OpacityProperty,
-                        new DoubleAnimation(0.1, 1.0, TimeSpan.FromMilliseconds(300)));
-                }
-            });
-            _ = TypewriteAsync(bubble, text);
+                fc.Opacity = 0.1;
+                fc.BeginAnimation(UIElement.OpacityProperty,
+                    new DoubleAnimation(0.1, 1.0, TimeSpan.FromMilliseconds(300)));
+            }
         });
+        _ = TypewriteAsync(bubble, text);
     }
 
     /// <summary>打字机效果：逐字更新气泡内容（阶段切换时自动停止）。</summary>
@@ -794,31 +797,6 @@ public partial class MainWindow : Window
         }
         if (token == _flowToken && _flowBubble == bubble)
             bubble.Content = text;
-    }
-
-    /// <summary>淡出并移除当前流程气泡，完成后回调。</summary>
-    private void FadeOutFlowBubble(Action onDone)
-    {
-        var bubble = _flowBubble;
-        if (bubble == null)
-        {
-            onDone();
-            return;
-        }
-        var container = ChatItems.ItemContainerGenerator.ContainerFromItem(bubble) as FrameworkElement;
-        if (container == null)
-        {
-            _chatItems.Remove(bubble);
-            onDone();
-            return;
-        }
-        var anim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(250));
-        anim.Completed += (_, _) =>
-        {
-            _chatItems.Remove(bubble);
-            onDone();
-        };
-        container.BeginAnimation(UIElement.OpacityProperty, anim);
     }
 
     /// <summary>将回答文本渲染为 FlowDocument（Markdig.Wpf）。</summary>

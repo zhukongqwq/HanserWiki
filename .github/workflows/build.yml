@@ -30,7 +30,7 @@ jobs:
         run: |
           $v = Get-Content -Raw version.json | ConvertFrom-Json
           $version = $v.version
-          $body = "# AI Hanser v$version"
+          $body = "# Hanser AI Wiki v$version"
           if ($v.date) { $body += "`n`n发布日期：$($v.date)" }
           $body += "`n`n## 本版本更新日志`n"
           foreach ($c in $v.changelog) { $body += "- $c`n" }
@@ -43,7 +43,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          name: AI Hanser v${{ steps.version.outputs.version }}
+          name: Hanser AI Wiki v${{ steps.version.outputs.version }}
           body: ${{ steps.version.outputs.body }}
           files: dist/*.exe
           draft: false

@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Hanser.Core/Hanser.Core.csproj" />
   <Project Path="Hanser.SmokeTest/Hanser.SmokeTest.csproj" />
+  <Project Path="Hanser.Tests/Hanser.Tests.csproj" />
   <Project Path="HanserWpf/HanserWpf.csproj" />
 </Solution>

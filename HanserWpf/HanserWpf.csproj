@@ -19,6 +19,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <AssemblyName>Hanser AI Wiki</AssemblyName>
+    <Product>Hanser AI Wiki</Product>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 应用图标：替换本目录 icon.ico 即可更换 exe/窗口图标 -->
+    <Resource Include="icon.ico" />
+  </ItemGroup>
 
 </Project>

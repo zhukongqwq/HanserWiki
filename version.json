@@ -1,12 +1,11 @@
 {
-  "version": "1.0.0",
-  "date": "2026-08-31",
+  "version": "1.0.1",
+  "date": "2026-09-01",
   "changelog": [
-    "数据本地化：文档与索引自包含于应用目录，便于分发",
-    "对话存档：chat-history/ 每对话独立文件，历史栏切换 / 新建 / 右键重命名与删除",
-    "文档导入与启动后台增量扫描",
-    "GitHub 更新源：list.json 清单 + sha256 差异按需下载，支持 gh-proxy 镜像前缀",
-    "界面：聊天式主界面、流程气泡打字机、折叠文档跳转高亮、自绘滚动条与对话框",
-    "数据库支持 docx / md / txt 文档索引"
+    "应用图标与项目名：更名为 Hanser AI Wiki（构建产物 exe 同名），支持自定义 icon.ico",
+    "发布 workflow：推送 main 自动构建单文件 exe 并创建 Release（版本/日志同步 version.json）",
+    "修复：AI 回答时最小化窗口恢复后残留流程气泡的问题",
+    "新增 ChatArchive 单元测试（xUnit，11 个用例，含旧格式兼容回归）",
+    "检查更新改为应用版本比对（HanserWiki version.json），支持启动自动检查与镜像前缀"
   ]
 }

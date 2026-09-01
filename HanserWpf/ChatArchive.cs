@@ -29,7 +29,13 @@ public static class ChatArchive
 {
     private const int MaxTitleLength = 30;
 
-    public static string ChatDir => Path.Combine(Paths.WpfRoot, "chat-history");
+    private static string? _chatDirOverride;
+
+    /// <summary>对话存档目录（测试时可通过 SetChatDirForTest 注入临时目录）。</summary>
+    public static string ChatDir => _chatDirOverride ?? Path.Combine(Paths.WpfRoot, "chat-history");
+
+    /// <summary>测试专用：覆盖存档目录（传 null 恢复默认）。</summary>
+    public static void SetChatDirForTest(string? dir) => _chatDirOverride = dir;
 
     /// <summary>对话摘要（用于历史栏列表）。</summary>
     public class ChatSummary
