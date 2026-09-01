@@ -6,11 +6,18 @@ namespace Hanser.Core;
 /// <summary>项目路径解析：C# 版复用 Python 目录下的数据（data / documents.db / userdict.txt）。</summary>
 public static class Paths
 {
-    /// <summary>项目根：向上搜索同时含 Python 与 HanserWpf 的目录（开发环境）；发布版无该组合时回退到程序目录。</summary>
+    /// <summary>
+    /// 项目根：发布版（DISTRIBUTION）恒为程序目录（数据自包含，不读开发环境数据）；
+    /// 开发版向上搜索同时含 Python 与 HanserWpf 的目录，找不到回退程序目录。
+    /// </summary>
     public static string Root
     {
         get
         {
+#if DISTRIBUTION
+            // 发布版：数据/词库/配置均在 exe 所在目录
+            return AppContext.BaseDirectory.TrimEnd('\\', '/');
+#else
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
@@ -21,14 +28,24 @@ public static class Paths
             }
             // 分发版：数据/词库/配置均在 exe 所在目录
             return AppContext.BaseDirectory.TrimEnd('\\', '/');
+#endif
         }
     }
 
-    /// <summary>C# 版根目录：开发环境为 Root/HanserWpf；发布版（无 HanserWpf 子目录）为程序目录本身（自包含）。</summary>
-    public static string WpfRoot =>
-        Directory.Exists(Path.Combine(Root, "HanserWpf"))
-            ? Path.Combine(Root, "HanserWpf")
-            : Root;
+    /// <summary>C# 版根目录：开发环境为 Root/HanserWpf；发布版（DISTRIBUTION）恒为程序目录本身（自包含）。</summary>
+    public static string WpfRoot
+    {
+        get
+        {
+#if DISTRIBUTION
+            return Root; // 发布版：exe 目录即应用根（不判断 HanserWpf 子目录，避免误判）
+#else
+            return Directory.Exists(Path.Combine(Root, "HanserWpf"))
+                ? Path.Combine(Root, "HanserWpf")
+                : Root;
+#endif
+        }
+    }
 
     /// <summary>docx 文档目录（C# 版本地数据，与 Python 版分离）。</summary>
     public static string DataDir => Path.Combine(WpfRoot, "data");

@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- 发布（dotnet publish）时自动定义 DISTRIBUTION：Paths 将只使用程序目录，避免上溯误读开发环境数据 -->
+    <DefineConstants Condition="'$(PublishDir)' != ''">$(DefineConstants);DISTRIBUTION</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
