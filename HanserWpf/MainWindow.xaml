@@ -480,21 +480,6 @@
                                                                         </Setter.Value>
                                                                     </Setter>
                                                                 </DataTrigger>
-                                                                <!-- AI 流式消息：打字机逐字显示 -->
-                                                                <DataTrigger Binding="{Binding Type}" Value="Streaming">
-                                                                    <Setter Property="ContentTemplate">
-                                                                        <Setter.Value>
-                                                                            <DataTemplate>
-                                                                                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1"
-                                                                                        CornerRadius="10" Padding="12,8" Margin="0,6" MaxWidth="640"
-                                                                                        HorizontalAlignment="Left">
-                                                                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap"
-                                                                                               FontSize="13" Foreground="#374151"/>
-                                                                                </Border>
-                                                                            </DataTemplate>
-                                                                        </Setter.Value>
-                                                                    </Setter>
-                                                                </DataTrigger>
                                                                 <!-- 流程状态小气泡（打字机效果，渐出渐入） -->
                                                                 <DataTrigger Binding="{Binding Type}" Value="Flow">
                                                                     <Setter Property="ContentTemplate">
@@ -556,19 +541,28 @@
 
                                 <!-- 底部聊天输入栏 -->
                                 <Grid Grid.Row="1" Margin="0,10,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="ChatInputBox" MinHeight="38" MaxHeight="120"
-                                             Style="{StaticResource RoundTextBox}"
-                                             AcceptsReturn="True" TextWrapping="Wrap"
-                                             VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"
-                                             ToolTip="输入问题：Enter 发送，Ctrl+Enter 换行。例如：海上油菜花是什么时候举办的？"
-                                             PreviewKeyDown="ChatInputBox_PreviewKeyDown"/>
-                                    <Button x:Name="SendButton" Grid.Column="1" Content="发送"
-                                            Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"
-                                            Click="SendButton_Click"/>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="ChatInputBox" MinHeight="38" MaxHeight="120"
+                                                 Style="{StaticResource RoundTextBox}"
+                                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                                 VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"
+                                                 ToolTip="输入问题：Enter 发送，Ctrl+Enter 换行。例如：海上油菜花是什么时候举办的？"
+                                                 PreviewKeyDown="ChatInputBox_PreviewKeyDown"/>
+                                        <Button x:Name="SendButton" Grid.Column="1" Content="发送"
+                                                Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"
+                                                Click="SendButton_Click"/>
+                                    </Grid>
+                                    <TextBlock Grid.Row="1" Text="内容为 AI 生成，请勿断章取义和未经思考直接采用"
+                                               FontSize="11" Foreground="#9CA3AF" HorizontalAlignment="Center"
+                                               Margin="0,6,0,0"/>
                                 </Grid>
                             </Grid>
                         </TabItem>

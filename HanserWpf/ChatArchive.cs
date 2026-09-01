@@ -7,12 +7,23 @@ using Hanser.Core;
 
 namespace HanserWpf;
 
-/// <summary>存档中的一条消息（docs 为回答附带的相关文档文件名清单）。</summary>
+/// <summary>折叠文档详情（存档恢复完整显示用：命中信息/摘要/关键词）。</summary>
+public class DocInfo
+{
+    public string Filename { get; set; } = "";
+    public string HitText { get; set; } = "";
+    public string Snippet { get; set; } = "";
+    public List<string>? Keywords { get; set; }
+}
+
+/// <summary>存档中的一条消息（DocInfos 为折叠文档详情；Docs 为旧格式文件名清单；Keywords 为该轮检索关键词）。</summary>
 public class ChatMessageRecord
 {
     public string Role { get; set; } = "user"; // user / assistant
     public string Content { get; set; } = "";
-    public List<string> Docs { get; set; } = new(); // 仅回答消息可能有
+    public List<string> Docs { get; set; } = new(); // 旧格式：仅文件名
+    public List<DocInfo>? DocInfos { get; set; } // 折叠文档详情（含命中信息/摘要/关键词）
+    public List<string>? Keywords { get; set; } // 仅回答消息可能有（该轮检索关键词）
 }
 
 /// <summary>一个对话的存档记录。</summary>

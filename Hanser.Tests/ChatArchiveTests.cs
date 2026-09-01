@@ -84,6 +84,46 @@ public class ChatArchiveTests : IDisposable
     }
 
     [Fact]
+    public void Save_Load_roundtrip_preserves_doc_infos()
+    {
+        // 回归：历史对话的折叠文档项应保存命中信息/摘要/关键词，加载后完整显示（非只有文件名）
+        var path = ChatArchive.CreateNew("测试对话");
+        var session = new ChatSessionRecord
+        {
+            Title = "测试对话",
+            Created = "2026-08-31T10:00:00",
+            Messages =
+            {
+                new ChatMessageRecord
+                {
+                    Role = "assistant",
+                    Content = "回答内容。",
+                    DocInfos = new List<DocInfo>
+                    {
+                        new()
+                        {
+                            Filename = "2024年1月1日 星期一.docx",
+                            HitText = "命中 3 次 · 直播、2023",
+                            Snippet = "今天直播了…",
+                            Keywords = new List<string> { "直播", "2023" },
+                        },
+                    },
+                },
+            },
+        };
+
+        ChatArchive.Save(path, session);
+
+        var loaded = ChatArchive.Load(path);
+        Assert.Single(loaded.Messages[0].DocInfos!);
+        var info = loaded.Messages[0].DocInfos![0];
+        Assert.Equal("2024年1月1日 星期一.docx", info.Filename);
+        Assert.Equal("命中 3 次 · 直播、2023", info.HitText);
+        Assert.Equal("今天直播了…", info.Snippet);
+        Assert.Equal(new List<string> { "直播", "2023" }, info.Keywords);
+    }
+
+    [Fact]
     public void ListChats_orders_by_updated_desc()
     {
         var first = ChatArchive.CreateNew("第一个问题");

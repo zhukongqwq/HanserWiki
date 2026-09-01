@@ -55,7 +55,6 @@ public class ChatMessageVm : INotifyPropertyChanged
 
     public static ChatMessageVm User(string text) => new("User", text, null, null, null);
     public static ChatMessageVm Assistant(string text, FlowDocument document) => new("Assistant", text, document, null, null);
-    public static ChatMessageVm Streaming(string text) => new("Streaming", text, null, null, null);
     public static ChatMessageVm Flow(string text) => new("Flow", text, null, null, null);
     public static ChatMessageVm DocList(string header, List<DocListItemVm> results)
         => new("DocList", null, null, header, results);
@@ -75,6 +74,24 @@ public class DocListItemVm
         HitText = $"命中 {r.Hits} 次 · {string.Join("、", r.Matched)}";
         Snippet = r.Snippet;
         Keywords = keywords;
+    }
+
+    /// <summary>存档加载用：完整详情（命中信息/摘要/关键词，恢复折叠列表完整显示）。</summary>
+    public DocListItemVm(string filename, string hitText, string snippet, List<string>? keywords)
+    {
+        Filename = filename;
+        HitText = hitText;
+        Snippet = snippet;
+        Keywords = keywords ?? new List<string>();
+    }
+
+    /// <summary>存档加载用：带检索关键词（恢复引用段落高亮）。</summary>
+    public DocListItemVm(string filename, List<string>? keywords)
+    {
+        Filename = filename;
+        HitText = "";
+        Snippet = "";
+        Keywords = keywords ?? new List<string>();
     }
 
     /// <summary>存档加载用：只有文件名（无命中信息与关键词）。</summary>
@@ -250,10 +267,19 @@ public partial class MainWindow : Window
             else
             {
                 _chatItems.Add(ChatMessageVm.Assistant(m.Content, BuildDocument(m.Content)));
-                if (m.Docs is { Count: > 0 })
+                // 优先恢复完整详情（命中信息/摘要/关键词）；旧存档仅文件名时给出说明，避免空白
+                if (m.DocInfos is { Count: > 0 })
+                {
+                    _chatItems.Add(ChatMessageVm.DocList(
+                        $"📄 相关文档（{m.DocInfos.Count} 篇，点击展开）",
+                        m.DocInfos.Select(d => new DocListItemVm(d.Filename, d.HitText, d.Snippet, d.Keywords)).ToList()));
+                }
+                else if (m.Docs is { Count: > 0 })
+                {
                     _chatItems.Add(ChatMessageVm.DocList(
                         $"📄 相关文档（{m.Docs.Count} 篇，点击展开）",
-                        m.Docs.Select(d => new DocListItemVm(d)).ToList()));
+                        m.Docs.Select(d => new DocListItemVm(d, "（历史存档文档，无命中信息）", "", m.Keywords)).ToList()));
+                }
             }
         }
         _currentChatPath = path;
@@ -287,8 +313,18 @@ public partial class MainWindow : Window
                     session.Messages.Add(currentAssistant);
                     break;
                 case "DocList" when currentAssistant != null:
-                    currentAssistant.Docs = (m.Results ?? new List<DocListItemVm>())
-                        .Select(r => r.Filename).ToList();
+                    var docItems = m.Results ?? new List<DocListItemVm>();
+                    currentAssistant.Docs = docItems.Select(r => r.Filename).ToList();
+                    // 保存折叠文档详情（命中信息/摘要/关键词），供加载后完整显示
+                    currentAssistant.DocInfos = docItems.Select(r => new DocInfo
+                    {
+                        Filename = r.Filename,
+                        HitText = r.HitText,
+                        Snippet = r.Snippet,
+                        Keywords = r.Keywords,
+                    }).ToList();
+                    // 记录该轮检索关键词，供加载后恢复引用段落高亮
+                    currentAssistant.Keywords = docItems.FirstOrDefault()?.Keywords;
                     break;
             }
         }
@@ -703,26 +739,14 @@ public partial class MainWindow : Window
             var (anchored, _) = await new Prometheus().RunAsync(client, question, keywords, results);
             AppendGlobalLog("  锚定：" + (anchored.Count > 0 ? string.Join("、", anchored) : "无"));
 
-            // 阶段 3：憨憨（流式生成最终回答）
+            // 阶段 3：憨憨（一次性生成最终回答）
             SetFlowStatus(StageHanser);
-            AppendGlobalLog($"[3/3] {StageHanser}（hanser 流式生成最终回答）");
-            var answerBubble = ChatMessageVm.Streaming("");
-            _chatItems.Add(answerBubble);
-            ScrollChatToEnd();
+            AppendGlobalLog($"[3/3] {StageHanser}（hanser 生成最终回答）");
+            var answer = await new Hanser.Core.Hanser().RunAsync(client, question, anchored);
 
-            var sb = new StringBuilder();
-            await new Hanser.Core.Hanser().RunStreamingAsync(client, question, anchored, delta =>
-            {
-                sb.Append(delta);
-                answerBubble.Content = sb.ToString();
-                ScrollChatToEnd();
-            });
-
-            // 完成：流程气泡淡出，回答切换为 Markdown 渲染，文档列表折叠保存
+            // 完成：流程气泡移除，回答直接以 Markdown 渲染显示，文档列表折叠保存
             SetFlowStatus(null);
-            var full = sb.ToString();
-            _chatItems[_chatItems.IndexOf(answerBubble)] =
-                ChatMessageVm.Assistant(full, BuildDocument(full));
+            _chatItems.Add(ChatMessageVm.Assistant(answer, BuildDocument(answer)));
             if (results.Count > 0)
                 _chatItems.Add(ChatMessageVm.DocList(
                     $"📄 本次检索到 {results.Count} 篇相关文档（点击展开）",
@@ -838,6 +862,8 @@ public partial class MainWindow : Window
     private void ShowDocument(string filename, string content, List<string>? keywords)
     {
         DocTitle.Text = filename;
+        if (string.IsNullOrEmpty(content))
+            content = "（该文档暂无正文，可能尚未索引或已从文档库移除）";
         DocViewer.Document = BuildDocumentWithHighlight(content, keywords);
         if (keywords != null && keywords.Count > 0)
             ScrollToFirstHighlight();

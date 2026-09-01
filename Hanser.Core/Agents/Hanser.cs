@@ -73,36 +73,4 @@ public class Hanser
             new() { Role = "user", Content = userContent },
         }, temperature: Temperature, topP: TopP);
     }
-
-    /// <summary>流式回答：逐块回调生成内容（onDelta），与 RunAsync 使用相同的提示词与资料。</summary>
-    public async Task RunStreamingAsync(LLMClient client, string question, List<string> anchored,
-        Action<string> onDelta)
-    {
-        if (anchored == null || anchored.Count == 0)
-        {
-            onDelta("（数据库中未找到相关内容，无法作答。）");
-            return;
-        }
-
-        var bodies = new List<string>();
-        using (var conn = Db.GetConnection())
-        {
-            foreach (var name in anchored)
-            {
-                var content = Db.GetDocumentContentByFilename(conn, name);
-                if (content.Length > 0)
-                {
-                    if (content.Length > MaxContentPerDoc)
-                        content = content[..MaxContentPerDoc];
-                    bodies.Add($"【文档：{name}】\n{content}");
-                }
-            }
-        }
-        var userContent = $"用户问题：{question}\n\n相关资料：\n" + string.Join("\n\n", bodies);
-        await client.StreamChatAsync(new List<ChatMessage>
-        {
-            new() { Role = "system", Content = SystemPrompt },
-            new() { Role = "user", Content = userContent },
-        }, onDelta, temperature: Temperature, topP: TopP);
-    }
 }
