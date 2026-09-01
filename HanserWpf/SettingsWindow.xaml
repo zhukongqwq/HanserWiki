@@ -1,0 +1,309 @@
+<Window x:Class="HanserWpf.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="设置" Width="600" Height="560"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" FontFamily="Microsoft YaHei UI">
+
+    <Window.Resources>
+        <Style TargetType="TabItem">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}"
+                                BorderBrush="#E5E7EB" BorderThickness="0,0,0,2" Margin="0,0,6,0">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource AccentPressedBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="FieldBox" TargetType="TextBox">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="14" Background="White" Margin="10" Padding="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.18" Color="#000000"/>
+        </Border.Effect>
+        <Grid Margin="14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 自绘标题栏 -->
+            <Grid Grid.Row="0" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="设置" FontSize="14" FontWeight="SemiBold" Foreground="#374151" VerticalAlignment="Center"/>
+                <Button x:Name="CloseButton" Grid.Column="1" Width="36" Height="28" Cursor="Hand"
+                        Click="CloseButton_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                <TextBlock x:Name="Txt" Text="✕" FontSize="13" Foreground="#6B7280"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#EF4444"/>
+                                    <Setter TargetName="Txt" Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+
+            <TabControl x:Name="SettingsTabs" Grid.Row="1" Background="Transparent" BorderThickness="0">
+            <!-- API 配置 -->
+            <TabItem Header="API 配置">
+                <Grid Margin="4,14,4,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="接口地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="BaseUrlBox" Style="{StaticResource FieldBox}"
+                             Margin="0,0,0,12" ToolTip="OpenAI 兼容接口地址，如 https://api.deepseek.com/v1"/>
+
+                    <TextBlock Grid.Row="1" Text="API 密钥" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="ApiKeyBox" Style="{StaticResource FieldBox}"
+                             Margin="0,0,0,12" ToolTip="API 密钥（保存到本地 config.yml，不会被提交）"/>
+
+                    <TextBlock Grid.Row="2" Text="模型名" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="ModelBox" Style="{StaticResource FieldBox}"
+                             Margin="0,0,0,12" ToolTip="如 deepseek-v4-flash / deepseek-chat"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="1" Foreground="#9CA3AF" FontSize="11" TextWrapping="Wrap"
+                               Text="保存到 HanserWpf/config.yml。留空的项回退到环境变量 OPENAI_BASE_URL / OPENAI_API_KEY / OPENAI_MODEL；下次提问时生效。"/>
+                </Grid>
+            </TabItem>
+
+            <!-- jieba 词库 -->
+            <TabItem Header="jieba 词库">
+                <Grid Margin="4,14,4,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Foreground="#374151" FontSize="13" TextWrapping="Wrap"
+                               Text="编辑 userdict.txt（jieba 自定义词典，UTF-8）。每行一个词条：词语 词频 词性（词频/词性可省略），例如：一抹憨色 100 nz"/>
+                    <TextBox x:Name="UserDictBox" Grid.Row="1" Margin="0,10,0,0"
+                             FontFamily="Consolas" FontSize="12"
+                             AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                             BorderBrush="#D1D5DB" BorderThickness="1" Padding="8,6"/>
+                    <TextBlock Grid.Row="2" Foreground="{StaticResource AccentPressedBrush}" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="提示：只加正文中实际成块出现的专有名词/黑话/缩写，勿加过长词组；保存后请在主窗口执行「重建索引」使分词生效。"/>
+                </Grid>
+            </TabItem>
+            <!-- 数据与更新 -->
+            <TabItem Header="数据与更新">
+                <Grid Margin="4,14,4,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.ColumnSpan="2" Text="GitHub 更新源（list.json 清单增量更新）"
+                               FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="0,0,0,4"/>
+
+                    <TextBlock Grid.Row="1" Text="仓库地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="UpdateUrlBox" Style="{StaticResource FieldBox}"
+                             Margin="0,0,0,10"
+                             ToolTip="如 https://github.com/owner/repo.git；网络受限可加镜像前缀，如 https://gh-proxy.com/https://github.com/owner/repo.git"/>
+
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Foreground="#9CA3AF" FontSize="11" TextWrapping="Wrap"
+                               Text="保存时校验仓库 Release 中是否存在 list.json；「检查更新」按清单（文件 sha256）增量下载缺失/变更的 docx。示例：直连 https://github.com/owner/repo.git ；镜像 https://gh-proxy.com/https://github.com/owner/repo.git"/>
+
+                    <Rectangle Grid.Row="3" Grid.ColumnSpan="2" Height="1" Fill="#E5E7EB" Margin="0,6"/>
+
+                    <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button x:Name="ClearHistoryButton" Content="清空全部对话历史" Cursor="Hand"
+                                Foreground="#374151" FontSize="12" Click="ClearHistoryButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="White" BorderBrush="#D1D5DB"
+                                            BorderThickness="1" CornerRadius="6" Padding="12,5">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#F3F4F6"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <TextBlock Text="删除 chat-history/ 下全部对话（不可恢复）"
+                                   VerticalAlignment="Center" Margin="12,0,0,0"
+                                   Foreground="#9CA3AF" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+            <!-- 关于 -->
+            <TabItem Header="关于">
+                <Grid Margin="4,14,4,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock x:Name="AboutNameText" Text="AI Hanser — docx 文档检索问答"
+                               FontSize="16" FontWeight="SemiBold" Foreground="#374151"/>
+                    <TextBlock x:Name="AboutVersionText" Grid.Row="1" FontSize="12"
+                               Foreground="#9CA3AF" Margin="0,4,0,0"/>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Content="GitHub 仓库" Cursor="Hand" Foreground="#374151" FontSize="12"
+                                Click="AboutRepoButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="#F3F4F6" CornerRadius="6" Padding="10,4">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#E5E7EB"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <Button Content="作者：zhukongqwq" Cursor="Hand" Foreground="#374151" FontSize="12"
+                                Margin="10,0,0,0" Click="AboutAuthorButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="#F3F4F6" CornerRadius="6" Padding="10,4">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#E5E7EB"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="3" Text="本版本更新日志" FontWeight="SemiBold"
+                               Foreground="#374151" FontSize="13" Margin="0,16,0,0"/>
+
+                    <TextBox x:Name="AboutChangelogBox" Grid.Row="4" Margin="0,8,0,0"
+                             IsReadOnly="True" TextWrapping="Wrap" FontSize="12"
+                             Foreground="#4B5563" VerticalScrollBarVisibility="Auto" MinHeight="120"
+                             BorderBrush="#E5E7EB" Background="#F9FAFB" Padding="8"/>
+
+                    <Button x:Name="CheckUpdateButton" Grid.Row="6" Content="检查更新" Cursor="Hand"
+                            Width="120" Height="32" HorizontalAlignment="Left" Margin="0,12,0,0"
+                            Foreground="{StaticResource AccentTextBrush}" FontSize="13"
+                            Click="CheckUpdateButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{StaticResource AccentBrush}" CornerRadius="6">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="SaveButton" Content="保存" Width="92" Height="32" Margin="0,0,10,0"
+                    Foreground="{StaticResource AccentTextBrush}" FontSize="13" Cursor="Hand"
+                    Click="SaveButton_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{StaticResource AccentBrush}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button Content="取消" Width="92" Height="32" Cursor="Hand"
+                    Foreground="#374151" FontSize="13" Click="CancelButton_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F3F4F6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
+    </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,611 @@
+﻿<Window x:Class="HanserWpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ihan助手，您的身边憨憨百科"
+        Height="780" Width="1240"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize"
+        Background="Transparent"
+        FontFamily="Microsoft YaHei UI"
+        TextOptions.TextFormattingMode="Display">
+
+    <Window.Resources>
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+
+        <!-- 主按钮：油菜花黄 -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="16,7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentDisabledBrush}"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 次要按钮：白底描边 -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F3F4F6"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E5E7EB"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 圆角输入框 -->
+        <Style x:Key="RoundTextBox" TargetType="TextBox">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Bd" Background="White"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}"
+                                BorderBrush="#E5E7EB" BorderThickness="0,0,0,2" Margin="0,0,6,0">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource AccentPressedBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F3F4F6"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ProgressBar">
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="8"/>
+        </Style>
+
+        <Style TargetType="ListViewItem">
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F3F4F6"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="14" Background="White" Margin="10" Padding="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.18" Color="#000000"/>
+        </Border.Effect>
+        <Grid Margin="14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ===== 自绘标题栏 ===== -->
+            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="ihan助手，您的身边憨憨百科" FontSize="14" FontWeight="SemiBold"
+                           Foreground="#374151" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="MinimizeButton" Width="36" Height="28" Margin="0,0,6,0"
+                            Cursor="Hand" Click="MinimizeButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                    <TextBlock x:Name="Txt" Text="─" FontSize="14" Foreground="#6B7280"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#E5E7EB"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button x:Name="CloseButton" Width="36" Height="28" Cursor="Hand"
+                            Click="CloseButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                    <TextBlock x:Name="Txt" Text="✕" FontSize="13" Foreground="#6B7280"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#EF4444"/>
+                                        <Setter TargetName="Txt" Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- ===== 顶部工具栏：重建/统计/设置 同一行同样式 ===== -->
+            <Border Grid.Row="1" Style="{StaticResource CardBorder}" Padding="12,10" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="RebuildButton" Content="重建索引" Style="{StaticResource SecondaryButton}"
+                                Click="RebuildButton_Click"/>
+                        <Button x:Name="ImportButton" Content="导入" Style="{StaticResource SecondaryButton}"
+                                Margin="8,0,0,0" ToolTip="导入 docx 文件到文档库并索引"
+                                Click="ImportButton_Click"/>
+                        <Button x:Name="CountButton" Content="库统计" Style="{StaticResource SecondaryButton}"
+                                Margin="8,0,0,0" Click="CountButton_Click"/>
+                        <Button x:Name="UpdateButton" Content="检查更新" Style="{StaticResource SecondaryButton}"
+                                Margin="8,0,0,0" ToolTip="从配置的 GitHub 仓库增量拉取文档"
+                                Click="UpdateButton_Click"/>
+                        <Button x:Name="SettingsButton" Content="设置" Style="{StaticResource SecondaryButton}"
+                                Margin="8,0,0,0" Click="SettingsButton_Click"/>
+                        <CheckBox x:Name="DryRunCheck" Content="模拟模式（dry-run）" VerticalAlignment="Center"
+                                  Margin="18,0,0,0" Foreground="#4B5563" FontSize="12"/>
+                    </StackPanel>
+
+                    <!-- 重建索引进度条（平时隐藏） -->
+                    <Grid x:Name="ProgressArea" Grid.Row="1" Visibility="Collapsed" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar x:Name="RebuildProgress" Height="8" Minimum="0" Maximum="100" Value="0"/>
+                        <TextBlock x:Name="ProgressText" Grid.Column="1" Margin="12,0,0,0"
+                                   FontSize="11" Foreground="#6B7280" VerticalAlignment="Center"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- ===== 中部：左侧检索/文档（可收起） + 右侧 AI 问答 / 运行日志 ===== -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="ExpandStripCol" Width="0"/>
+                    <ColumnDefinition x:Name="LeftCol" Width="400"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 展开条（收起时显示在左边缘） -->
+                <Grid x:Name="ExpandStrip" Grid.Column="0" Width="26" Visibility="Collapsed">
+                    <Button x:Name="ExpandDocButton" Width="28" Height="28" Cursor="Hand"
+                            Style="{StaticResource SecondaryButton}" Padding="0"
+                            ToolTip="展开文档检索区" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Click="ExpandDocButton_Click">
+                        <TextBlock Text="▶" FontSize="11" Foreground="#6B7280"/>
+                    </Button>
+                </Grid>
+
+                <!-- 左侧：搜索 + 搜索结果 + 文档正文（同一界面，可收起） -->
+                <Border Grid.Column="1" x:Name="DocPanel" Style="{StaticResource CardBorder}" Padding="10" Margin="0,0,10,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="190"/>
+                            <RowDefinition Height="150"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 标题行：文档检索 + 收起 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="📄 文档检索" FontWeight="Bold" FontSize="13"
+                                       Foreground="#374151" VerticalAlignment="Center"/>
+                            <Button x:Name="CollapseDocButton" Grid.Column="1" Width="28" Height="28"
+                                    Style="{StaticResource SecondaryButton}" Padding="0"
+                                    ToolTip="收起文档检索区" Click="CollapseDocButton_Click">
+                                <TextBlock Text="◀" FontSize="11" Foreground="#6B7280"/>
+                            </Button>
+                        </Grid>
+
+                        <!-- 搜索框：位于检索结果正上方 -->
+                        <Grid Grid.Row="1" Margin="0,8,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="SearchBox" Height="32"
+                                     Style="{StaticResource RoundTextBox}"
+                                     ToolTip="检索关键词（空格分隔），Enter 搜索"
+                                     KeyDown="SearchBox_KeyDown"/>
+                            <Button x:Name="SearchButton" Grid.Column="1" Content="搜索"
+                                    Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"
+                                    Padding="12,5" Click="SearchButton_Click"/>
+                        </Grid>
+
+                        <!-- 检索结果列表 -->
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="检索结果" FontWeight="Bold" FontSize="12" Foreground="#374151" Margin="4,0,0,6"/>
+                            <ListView x:Name="ResultList" Grid.Row="1"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      BorderThickness="0" Background="Transparent"
+                                      SelectionChanged="ResultList_SelectionChanged">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="2,3">
+                                            <TextBlock Text="{Binding Filename}" FontWeight="SemiBold"
+                                                       Foreground="#111827" TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                <TextBlock Text="{Binding ScoreText}" Foreground="{StaticResource AccentPressedBrush}" FontSize="11"/>
+                                                <TextBlock Text="{Binding HitText}" Foreground="#9CA3AF" FontSize="11" Margin="10,0,0,0"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Snippet}" Foreground="#6B7280" FontSize="11"
+                                                       TextWrapping="Wrap" MaxHeight="38" Margin="0,2,0,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                        <Rectangle Grid.Row="3" Height="1" Fill="#E5E7EB" Margin="4,10"/>
+                        <Grid Grid.Row="4" Margin="4,10,4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock x:Name="DocTitle" Text="（在上面选择一篇文档）"
+                                       FontWeight="SemiBold" Foreground="#374151" FontSize="12"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <FlowDocumentScrollViewer x:Name="DocViewer" Grid.Row="1" Margin="0,6,0,0"
+                                                      BorderBrush="#E5E7EB" BorderThickness="1"
+                                                      Background="#F9FAFB" Padding="8"
+                                                      VerticalScrollBarVisibility="Auto"/>
+                        </Grid>
+
+                        <!-- 历史对话栏 -->
+                        <Grid Grid.Row="5" Margin="4,10,4,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="历史对话" FontWeight="Bold" FontSize="12"
+                                           Foreground="#374151" VerticalAlignment="Center"/>
+                                <Button x:Name="NewChatButton" Grid.Column="1" Content="＋ 新对话"
+                                        Style="{StaticResource SecondaryButton}" Padding="8,3" FontSize="11"
+                                        Click="NewChatButton_Click"/>
+                            </Grid>
+                            <ListBox x:Name="ChatHistoryList" Grid.Row="1" Margin="0,6,0,0"
+                                     BorderThickness="0" Background="Transparent"
+                                     PreviewMouseRightButtonDown="ChatHistoryList_PreviewMouseRightButtonDown"
+                                     SelectionChanged="ChatHistoryList_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Title}" FontSize="12" Foreground="#374151"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="重命名" Click="RenameChatMenuItem_Click"/>
+                                        <MenuItem Header="删除" Click="DeleteChatMenuItem_Click"/>
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
+                            </ListBox>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- 右侧标签页 -->
+                <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="10">
+                    <TabControl x:Name="MainTabs" Background="Transparent" BorderThickness="0">
+
+                        <!-- AI 问答（默认，聊天式） -->
+                        <TabItem Header="AI 问答">
+                            <Grid Margin="2,10,2,2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 聊天对话区 -->
+                                <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              Focusable="False"
+                                              KeyboardNavigation.TabNavigation="None">
+                                    <ItemsControl x:Name="ChatItems" MouseLeftButtonDown="ChatList_MouseLeftButtonDown">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <ContentControl Content="{Binding}">
+                                                    <ContentControl.Style>
+                                                        <Style TargetType="ContentControl">
+                                                            <Style.Triggers>
+                                                                <!-- 用户消息：右对齐黄底气泡 -->
+                                                                <DataTrigger Binding="{Binding Type}" Value="User">
+                                                                    <Setter Property="ContentTemplate">
+                                                                        <Setter.Value>
+                                                                            <DataTemplate>
+                                                                                <Grid Margin="0,6">
+                                                                                    <Grid.ColumnDefinitions>
+                                                                                        <ColumnDefinition Width="*"/>
+                                                                                        <ColumnDefinition Width="Auto"/>
+                                                                                    </Grid.ColumnDefinitions>
+                                                                                    <Border Grid.Column="1" Background="{StaticResource AccentSoftBrush}"
+                                                                                            CornerRadius="10" Padding="12,8" MaxWidth="540">
+                                                                                        <TextBlock Text="{Binding Content}" TextWrapping="Wrap"
+                                                                                                   FontSize="13" Foreground="#374151"/>
+                                                                                    </Border>
+                                                                                </Grid>
+                                                                            </DataTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <!-- AI 消息：左对齐白底气泡 + Markdown -->
+                                                                <DataTrigger Binding="{Binding Type}" Value="Assistant">
+                                                                    <Setter Property="ContentTemplate">
+                                                                        <Setter.Value>
+                                                                            <DataTemplate>
+                                                                                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1"
+                                                                                        CornerRadius="10" Padding="12,8" Margin="0,6" MaxWidth="640"
+                                                                                        HorizontalAlignment="Left">
+                                                                                    <FlowDocumentScrollViewer Document="{Binding Document}"
+                                                                                                              BorderThickness="0" Padding="0"
+                                                                                                              VerticalScrollBarVisibility="Auto"
+                                                                                                              MaxHeight="420"/>
+                                                                                </Border>
+                                                                            </DataTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <!-- AI 流式消息：打字机逐字显示 -->
+                                                                <DataTrigger Binding="{Binding Type}" Value="Streaming">
+                                                                    <Setter Property="ContentTemplate">
+                                                                        <Setter.Value>
+                                                                            <DataTemplate>
+                                                                                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1"
+                                                                                        CornerRadius="10" Padding="12,8" Margin="0,6" MaxWidth="640"
+                                                                                        HorizontalAlignment="Left">
+                                                                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap"
+                                                                                               FontSize="13" Foreground="#374151"/>
+                                                                                </Border>
+                                                                            </DataTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <!-- 流程状态小气泡（打字机效果，渐出渐入） -->
+                                                                <DataTrigger Binding="{Binding Type}" Value="Flow">
+                                                                    <Setter Property="ContentTemplate">
+                                                                        <Setter.Value>
+                                                                            <DataTemplate>
+                                                                                <Border Background="#FFF7E0" BorderBrush="#F5D78E" BorderThickness="1"
+                                                                                        CornerRadius="10" Padding="10,6" Margin="0,4" MaxWidth="420"
+                                                                                        HorizontalAlignment="Left">
+                                                                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap"
+                                                                                               FontSize="12" Foreground="#8A6D1D"/>
+                                                                                </Border>
+                                                                            </DataTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <!-- 折叠的搜索结果列表 -->
+                                                                <DataTrigger Binding="{Binding Type}" Value="DocList">
+                                                                    <Setter Property="ContentTemplate">
+                                                                        <Setter.Value>
+                                                                            <DataTemplate>
+                                                                                <Expander Margin="0,8" IsExpanded="False">
+                                                                                    <Expander.Header>
+                                                                                        <TextBlock Text="{Binding Header}" FontSize="12"
+                                                                                                   Foreground="{StaticResource AccentPressedBrush}"
+                                                                                                   FontWeight="SemiBold"/>
+                                                                                    </Expander.Header>
+                                                                                    <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1"
+                                                                                            CornerRadius="8" Padding="6" Margin="0,6,0,0">
+                                                                                        <ItemsControl ItemsSource="{Binding Results}">
+                                                                                            <ItemsControl.ItemTemplate>
+                                                                                                <DataTemplate>
+                                                                                                    <StackPanel Margin="6,4" Cursor="Hand">
+                                                                                                        <TextBlock Text="{Binding Filename}" FontWeight="SemiBold"
+                                                                                                                   FontSize="12" Foreground="#111827"
+                                                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                                                        <TextBlock Text="{Binding HitText}" FontSize="11"
+                                                                                                                   Foreground="#9CA3AF" Margin="0,1,0,0"/>
+                                                                                                        <TextBlock Text="{Binding Snippet}" FontSize="11"
+                                                                                                                   Foreground="#6B7280" TextWrapping="Wrap"
+                                                                                                                   Margin="0,1,0,0" MaxHeight="32"/>
+                                                                                                    </StackPanel>
+                                                                                                </DataTemplate>
+                                                                                            </ItemsControl.ItemTemplate>
+                                                                                        </ItemsControl>
+                                                                                    </Border>
+                                                                                </Expander>
+                                                                            </DataTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ContentControl.Style>
+                                                </ContentControl>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <!-- 底部聊天输入栏 -->
+                                <Grid Grid.Row="1" Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="ChatInputBox" MinHeight="38" MaxHeight="120"
+                                             Style="{StaticResource RoundTextBox}"
+                                             AcceptsReturn="True" TextWrapping="Wrap"
+                                             VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top"
+                                             ToolTip="输入问题：Enter 发送，Ctrl+Enter 换行。例如：海上油菜花是什么时候举办的？"
+                                             PreviewKeyDown="ChatInputBox_PreviewKeyDown"/>
+                                    <Button x:Name="SendButton" Grid.Column="1" Content="发送"
+                                            Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"
+                                            Click="SendButton_Click"/>
+                                </Grid>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- 运行日志 -->
+                        <TabItem Header="运行日志">
+                            <Grid Margin="2,10,2,2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="OpenLogFolderButton" Content="打开日志文件夹"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Click="OpenLogFolderButton_Click"/>
+                                    <TextBlock Text="运行日志实时记录并保存到本地（最多保留 5 个文件）"
+                                               VerticalAlignment="Center" Margin="12,0,0,0"
+                                               Foreground="#9CA3AF" FontSize="11"/>
+                                </StackPanel>
+                                <TextBox x:Name="GlobalLogBox" Grid.Row="1" Margin="0,10,0,0"
+                                         IsReadOnly="True" TextWrapping="Wrap" FontSize="11"
+                                         FontFamily="Consolas" Foreground="#4B5563"
+                                         VerticalScrollBarVisibility="Auto"
+                                         BorderBrush="#E5E7EB" Background="#F9FAFB"/>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+                </Border>
+            </Grid>
+
+            <!-- ===== 底部状态栏 ===== -->
+            <Border Grid.Row="3" Margin="2,10,2,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="StatusText" Text="就绪" Foreground="#6B7280" FontSize="12"/>
+                    <TextBlock x:Name="CountText" Foreground="#6B7280" FontSize="12" Margin="24,0,0,0"/>
+                    <TextBlock x:Name="ModelText" Foreground="#6B7280" FontSize="12" Margin="24,0,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

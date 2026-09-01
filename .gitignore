@@ -1,0 +1,17 @@
+# .NET 构建产物
+**/bin/
+**/obj/
+*.user
+
+# 本地数据与配置（分发后由用户通过更新/导入生成）
+**/data/
+**/documents.db
+**/config.yml
+
+# 运行时产物
+logs/
+chat-history/
+.sync-list.json
+
+# jieba.NET 词典资源（构建时自动从 NuGet 包复制）
+jieba-resources/

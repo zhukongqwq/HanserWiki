@@ -1,0 +1,16 @@
+<!-- 共享构建目标：jieba.NET 的词典资源（Resources）不会自动复制到输出，
+     构建后从 NuGet 缓存复制到 HanserWpf/jieba-resources/，供 Tokenizer 通过 ConfigManager.ConfigFileBaseDir 加载。 -->
+<Project>
+  <Target Name="CopyJiebaResources" AfterTargets="Build">
+    <PropertyGroup>
+      <JiebaResSrc>$(NuGetPackageRoot)jieba.net\0.42.2\Resources</JiebaResSrc>
+      <JiebaResDst>$(MSBuildThisFileDirectory)jieba-resources</JiebaResDst>
+    </PropertyGroup>
+    <ItemGroup>
+      <JiebaResources Include="$(JiebaResSrc)\**" />
+    </ItemGroup>
+    <Copy SourceFiles="@(JiebaResources)"
+          DestinationFiles="@(JiebaResources->'$(JiebaResDst)\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>
