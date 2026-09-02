@@ -1,8 +1,9 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "date": "2026-09-01",
   "changelog": [
-    "修复发布版误读开发环境数据：发布版数据严格隔离在 exe 所在目录（独立自包含）",
-    "修复发布版 jieba 词典定位（词典随包 + 路径自适应）"
+    "支持三个 AI 独立 API 配置（bunny / prometheus / hanser 各自的 base_url / api_key / model / max_tokens）",
+    "自动应用模型最大输出上限；新增 DeepSeek v4 系列（flash / pro / flash-vision-exp）上限 1M",
+    "max_tokens 留空时按模型自动取值，可在设置中手动覆盖"
   ]
 }

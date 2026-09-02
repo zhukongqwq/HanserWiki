@@ -699,10 +699,13 @@ public partial class MainWindow : Window
             return;
         ChatInputBox.Clear();
 
-        LLMClient client;
+        LLMClient bunnyClient, prometheusClient, hanserClient;
         try
         {
-            client = new LLMClient(dryRun: DryRunCheck.IsChecked == true);
+            // 三个 AI 各自使用独立配置（agentName 对应设置中 agents 段；未填回退全局默认）
+            bunnyClient = new LLMClient(dryRun: DryRunCheck.IsChecked == true, agentName: "bunny");
+            prometheusClient = new LLMClient(dryRun: DryRunCheck.IsChecked == true, agentName: "prometheus");
+            hanserClient = new LLMClient(dryRun: DryRunCheck.IsChecked == true, agentName: "hanser");
         }
         catch (Exception exc)
         {
@@ -718,7 +721,7 @@ public partial class MainWindow : Window
             // 阶段 1：重装小兔（Project Bunny 关键词 + 数据库搜索）
             SetFlowStatus(StageBunny);
             AppendGlobalLog($"[1/3] {StageBunny}（Project Bunny 提取关键词 + 数据库搜索）");
-            var (keywords, _) = await new ProjectBunny().RunAsync(client, question);
+            var (keywords, _) = await new ProjectBunny().RunAsync(bunnyClient, question);
             AppendGlobalLog("  关键词：" + string.Join("、", keywords));
 
             var results = await Task.Run(() =>
@@ -736,13 +739,13 @@ public partial class MainWindow : Window
             // 阶段 2：普罗米修斯（锚定最相关文档）
             SetFlowStatus(StagePrometheus);
             AppendGlobalLog($"[2/3] {StagePrometheus}（Prometheus 锚定最相关文档）");
-            var (anchored, _) = await new Prometheus().RunAsync(client, question, keywords, results);
+            var (anchored, _) = await new Prometheus().RunAsync(prometheusClient, question, keywords, results);
             AppendGlobalLog("  锚定：" + (anchored.Count > 0 ? string.Join("、", anchored) : "无"));
 
             // 阶段 3：憨憨（一次性生成最终回答）
             SetFlowStatus(StageHanser);
             AppendGlobalLog($"[3/3] {StageHanser}（hanser 生成最终回答）");
-            var answer = await new Hanser.Core.Hanser().RunAsync(client, question, anchored);
+            var answer = await new Hanser.Core.Hanser().RunAsync(hanserClient, question, anchored);
 
             // 完成：流程气泡移除，回答直接以 Markdown 渲染显示，文档列表折叠保存
             SetFlowStatus(null);

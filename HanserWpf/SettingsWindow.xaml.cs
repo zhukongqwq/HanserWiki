@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Hanser.Core;
 
@@ -64,10 +65,25 @@ public partial class SettingsWindow : Window
 
     private void LoadConfig()
     {
-        var (baseUrl, apiKey, model) = LLMClient.LoadConfig();
+        var (baseUrl, apiKey, model, maxTokens) = LLMClient.LoadConfig();
         BaseUrlBox.Text = baseUrl;
         ApiKeyBox.Text = apiKey;
         ModelBox.Text = model;
+        MaxTokensBox.Text = maxTokens > 0 ? maxTokens.ToString() : "";
+        LoadAgentBoxes("bunny", BunnyBaseUrlBox, BunnyApiKeyBox, BunnyModelBox, BunnyMaxTokensBox);
+        LoadAgentBoxes("prometheus", PrometheusBaseUrlBox, PrometheusApiKeyBox, PrometheusModelBox, PrometheusMaxTokensBox);
+        LoadAgentBoxes("hanser", HanserBaseUrlBox, HanserApiKeyBox, HanserModelBox, HanserMaxTokensBox);
+    }
+
+    private static void LoadAgentBoxes(string agentName, TextBox url, TextBox key, TextBox model, TextBox maxTokens)
+    {
+        var cfg = LLMClient.LoadAgentConfig(agentName);
+        if (cfg == null)
+            return;
+        url.Text = cfg.Value.BaseUrl;
+        key.Text = cfg.Value.ApiKey;
+        model.Text = cfg.Value.Model;
+        maxTokens.Text = cfg.Value.MaxTokens > 0 ? cfg.Value.MaxTokens.ToString() : "";
     }
 
     private void LoadUserDict()
@@ -88,6 +104,38 @@ public partial class SettingsWindow : Window
     private static string YamlQuote(string s)
         => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
+    /// <summary>生成完整 config.yml（openai 全局 + agents 三 AI + update_source）。</summary>
+    private string BuildConfigYml()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# AI 服务配置（OpenAI 兼容接口）");
+        sb.AppendLine("# agents 下可分别配置三个 AI（bunny/prometheus/hanser）；留空的项回退全局默认与环境变量");
+        sb.AppendLine("openai:");
+        sb.AppendLine($"  base_url: {YamlQuote(BaseUrlBox.Text.Trim())}");
+        sb.AppendLine($"  api_key: {YamlQuote(ApiKeyBox.Text.Trim())}");
+        sb.AppendLine($"  model: {YamlQuote(ModelBox.Text.Trim())}");
+        sb.AppendLine($"  max_tokens: {ParseInt(MaxTokensBox.Text)}");
+        sb.AppendLine("agents:");
+        AppendAgent(sb, "bunny", BunnyBaseUrlBox, BunnyApiKeyBox, BunnyModelBox, BunnyMaxTokensBox);
+        AppendAgent(sb, "prometheus", PrometheusBaseUrlBox, PrometheusApiKeyBox, PrometheusModelBox, PrometheusMaxTokensBox);
+        AppendAgent(sb, "hanser", HanserBaseUrlBox, HanserApiKeyBox, HanserModelBox, HanserMaxTokensBox);
+        sb.AppendLine("update_source:");
+        sb.AppendLine($"  url: {YamlQuote(UpdateUrlBox.Text.Trim())}");
+        return sb.ToString();
+    }
+
+    private static void AppendAgent(StringBuilder sb, string name, TextBox url, TextBox key,
+        TextBox model, TextBox maxTokens)
+    {
+        sb.AppendLine($"  {name}:");
+        sb.AppendLine($"    base_url: {YamlQuote(url.Text.Trim())}");
+        sb.AppendLine($"    api_key: {YamlQuote(key.Text.Trim())}");
+        sb.AppendLine($"    model: {YamlQuote(model.Text.Trim())}");
+        sb.AppendLine($"    max_tokens: {ParseInt(maxTokens.Text)}");
+    }
+
+    private static int ParseInt(string s) => int.TryParse(s?.Trim(), out var v) ? v : 0;
+
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         SaveButton.IsEnabled = false;
@@ -95,53 +143,46 @@ public partial class SettingsWindow : Window
         wait.Show();
         try
         {
-            // 保存 API 配置到 HanserWpf/config.yml（保留注释头）
-        try
-        {
-            var content = "# AI 服务配置（OpenAI 兼容接口）\n" +
-                          "# 未填写的项回退到环境变量（OPENAI_BASE_URL / OPENAI_API_KEY / OPENAI_MODEL）\n" +
-                          "openai:\n" +
-                          $"  base_url: {YamlQuote(BaseUrlBox.Text.Trim())}\n" +
-                          $"  api_key: {YamlQuote(ApiKeyBox.Text.Trim())}\n" +
-                          $"  model: {YamlQuote(ModelBox.Text.Trim())}\n";
-            File.WriteAllText(Paths.ConfigYmlPath, content, new UTF8Encoding(false));
-        }
-        catch (Exception exc)
-        {
-            AppDialog.Info(this, $"保存 config.yml 失败：{exc.Message}", "API 配置");
-            return;
-        }
-
-        // 保存 jieba 词库到 Python/userdict.txt（统一换行符，保证末尾换行）
-        try
-        {
-            var text = UserDictBox.Text.Replace("\r\n", "\n").Replace('\r', '\n');
-            if (text.Length > 0 && !text.EndsWith("\n"))
-                text += "\n";
-            File.WriteAllText(Paths.UserDictPath, text, new UTF8Encoding(false));
-        }
-        catch (Exception exc)
-        {
-            AppDialog.Info(this, $"保存 userdict.txt 失败：{exc.Message}", "jieba 词库");
-            return;
-        }
-
-        // 保存 GitHub 更新源配置：先校验仓库 list.json 存在，否则禁止保存
-        var repoUrl = UpdateUrlBox.Text.Trim();
-        if (repoUrl.Length > 0)
-        {
-            var (ok, msg) = await GitHubSync.ValidateListUrlAsync(repoUrl);
-            if (!ok)
+            // 保存 API 配置（全局 + 三 AI + 更新源）到 config.yml
+            try
             {
-                wait.Close();
-                AppDialog.Info(this, $"无法保存更新源：\n{msg}", "更新源校验失败");
+                File.WriteAllText(Paths.ConfigYmlPath, BuildConfigYml(), new UTF8Encoding(false));
+            }
+            catch (Exception exc)
+            {
+                AppDialog.Info(this, $"保存 config.yml 失败：{exc.Message}", "API 配置");
                 return;
             }
-            GitHubSync.SaveConfig(new GitHubSync.Config { Url = repoUrl });
-        }
 
-        // 保存应用设置（启动自动检查更新开关）
-        AppSettings.Save(new AppSettings { AutoCheckUpdate = AutoCheckUpdateCheck.IsChecked == true });
+            // 保存 jieba 词库（统一换行符，保证末尾换行）
+            try
+            {
+                var text = UserDictBox.Text.Replace("\r\n", "\n").Replace('\r', '\n');
+                if (text.Length > 0 && !text.EndsWith("\n"))
+                    text += "\n";
+                File.WriteAllText(Paths.UserDictPath, text, new UTF8Encoding(false));
+            }
+            catch (Exception exc)
+            {
+                AppDialog.Info(this, $"保存 userdict.txt 失败：{exc.Message}", "jieba 词库");
+                return;
+            }
+
+            // 保存 GitHub 更新源配置：先校验仓库 list.json 存在，否则禁止保存
+            var repoUrl = UpdateUrlBox.Text.Trim();
+            if (repoUrl.Length > 0)
+            {
+                var (ok, msg) = await GitHubSync.ValidateListUrlAsync(repoUrl);
+                if (!ok)
+                {
+                    wait.Close();
+                    AppDialog.Info(this, $"无法保存更新源：\n{msg}", "更新源校验失败");
+                    return;
+                }
+            }
+
+            // 保存应用设置（启动自动检查更新开关）
+            AppSettings.Save(new AppSettings { AutoCheckUpdate = AutoCheckUpdateCheck.IsChecked == true });
 
             wait.Close();
             AppDialog.Info(this,

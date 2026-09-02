@@ -17,10 +17,29 @@ public class ChatMessage
     public string Content { get; set; } = "";
 }
 
-/// <summary>LLM 客户端：OpenAI 兼容接口封装，支持 dry-run 模拟模式（对应 Python 版 utils/llm.py）。</summary>
+/// <summary>LLM 客户端：OpenAI 兼容接口封装，支持 dry-run 模拟与按 AI（agent）独立配置（对应 Python 版 utils/llm.py）。</summary>
 public class LLMClient
 {
     private const string DefaultBaseUrl = "https://api.openai.com/v1";
+    private const int DefaultOutputLimit = 8192; // 未知名模型的保守输出上限
+
+    /// <summary>常见模型的最大输出 token 上限（前缀匹配，仍可被配置值覆盖）。</summary>
+    private static readonly (string Prefix, int Limit)[] ModelOutputLimits =
+    {
+        ("deepseek-v4-flash", 1000000),
+        ("deepseek-pro", 1000000),
+        ("deepseek-flash-vision-exp", 1000000),
+        ("gpt-4o", 16384),
+        ("gpt-4", 8192),
+        ("gpt-3.5", 4096),
+        ("qwen", 8192),
+        ("glm", 8192),
+        ("kimi", 8192),
+        ("moonshot", 8192),
+        ("claude", 8192),
+        ("gemini", 8192),
+        ("ernie", 8192),
+    };
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
     private readonly bool _dryRun;
@@ -29,66 +48,121 @@ public class LLMClient
     public string ApiKey { get; }
     public string Model { get; }
 
+    /// <summary>该模型本次会话生效的最大输出 token（配置 &gt; agent 配置 &gt; 全局配置 &gt; 模型映射表 &gt; 保守默认）。</summary>
+    public int MaxOutputTokens { get; }
+
     public LLMClient(string? baseUrl = null, string? apiKey = null, string? model = null,
-        bool dryRun = false, string? configPath = null)
+        bool dryRun = false, string? configPath = null, string? agentName = null, int? maxTokens = null)
     {
-        var cfg = LoadConfig(configPath);
-        BaseUrl = FirstNonEmpty(baseUrl, cfg.BaseUrl, Environment.GetEnvironmentVariable("OPENAI_BASE_URL"), DefaultBaseUrl);
-        ApiKey = FirstNonEmpty(apiKey, cfg.ApiKey, Environment.GetEnvironmentVariable("OPENAI_API_KEY"), "");
-        Model = FirstNonEmpty(model, cfg.Model, Environment.GetEnvironmentVariable("OPENAI_MODEL"), "");
+        var cfg = LoadConfig(configPath);                                   // 全局默认（openai 段）
+        var agent = agentName == null ? null : LoadAgentConfig(agentName, configPath); // 该 AI 的独立配置（可空）
+
+        BaseUrl = FirstNonEmpty(baseUrl, agent?.BaseUrl, cfg.BaseUrl,
+            Environment.GetEnvironmentVariable("OPENAI_BASE_URL"), DefaultBaseUrl);
+        ApiKey = FirstNonEmpty(apiKey, agent?.ApiKey, cfg.ApiKey,
+            Environment.GetEnvironmentVariable("OPENAI_API_KEY"), "");
+        Model = FirstNonEmpty(model, agent?.Model, cfg.Model,
+            Environment.GetEnvironmentVariable("OPENAI_MODEL"), "");
+        MaxOutputTokens = ResolveMaxTokens(maxTokens ?? agent?.MaxTokens ?? cfg.MaxTokens, Model);
         _dryRun = dryRun;
         if (!_dryRun)
         {
             if (string.IsNullOrEmpty(ApiKey))
-                throw new InvalidOperationException("未配置 api_key（请在 config.yml 填写，或设置 OPENAI_API_KEY；可加 --dry-run 模拟运行）");
+                throw new InvalidOperationException("未配置 api_key（请在设置中填写，或设置 OPENAI_API_KEY；可加 --dry-run 模拟运行）");
             if (string.IsNullOrEmpty(Model))
-                throw new InvalidOperationException("未配置 model（请在 config.yml 填写，或设置 OPENAI_MODEL；可加 --dry-run 模拟运行）");
+                throw new InvalidOperationException("未配置 model（请在设置中填写，或设置 OPENAI_MODEL；可加 --dry-run 模拟运行）");
         }
+    }
+
+    /// <summary>解析 max_tokens：显式配置 &gt; 0 用配置值，否则按模型映射表，未知名用保守默认。</summary>
+    private static int ResolveMaxTokens(int configured, string model)
+    {
+        if (configured > 0)
+            return configured;
+        var m = (model ?? "").ToLowerInvariant();
+        foreach (var (prefix, limit) in ModelOutputLimits)
+        {
+            if (m.Contains(prefix, StringComparison.Ordinal))
+                return limit;
+        }
+        return DefaultOutputLimit;
     }
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? "";
 
-    /// <summary>从 config.yml 读取 AI 配置（openai.base_url / openai.api_key / openai.model），失败时回退环境变量。</summary>
-    public static (string BaseUrl, string ApiKey, string Model) LoadConfig(string? configPath = null)
+    /// <summary>从 config.yml 读取全局 AI 配置（openai 段）。</summary>
+    public static (string BaseUrl, string ApiKey, string Model, int MaxTokens) LoadConfig(string? configPath = null)
+    {
+        var root = ReadConfigRoot(configPath);
+        if (root != null && root.TryGetValue("openai", out var o) && o is IDictionary<object, object> od)
+        {
+            return (
+                Get(od, "base_url"),
+                Get(od, "api_key"),
+                Get(od, "model"),
+                int.TryParse(Get(od, "max_tokens"), out var mt) ? mt : 0
+            );
+        }
+        return ("", "", "", 0);
+    }
+
+    /// <summary>读取某 AI（agent）的独立配置（config.yml 的 agents 段）；未配置返回 null。</summary>
+    public static (string BaseUrl, string ApiKey, string Model, int MaxTokens)? LoadAgentConfig(
+        string agentName, string? configPath = null)
+    {
+        var root = ReadConfigRoot(configPath);
+        if (root != null && root.TryGetValue("agents", out var a) && a is IDictionary<object, object> agents
+            && agents.TryGetValue(agentName, out var av) && av is IDictionary<object, object> ad)
+        {
+            var hasAny = Get(ad, "base_url").Length > 0 || Get(ad, "api_key").Length > 0
+                         || Get(ad, "model").Length > 0 || Get(ad, "max_tokens").Length > 0;
+            if (!hasAny)
+                return null;
+            return (
+                Get(ad, "base_url"),
+                Get(ad, "api_key"),
+                Get(ad, "model"),
+                int.TryParse(Get(ad, "max_tokens"), out var mt) ? mt : 0
+            );
+        }
+        return null;
+    }
+
+    private static Dictionary<string, object>? ReadConfigRoot(string? configPath)
     {
         var path = configPath ?? Paths.ConfigYmlPath;
         if (!File.Exists(path))
-            return ("", "", "");
+            return null;
         try
         {
-            var deserializer = new DeserializerBuilder().Build();
-            var root = deserializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
-            if (root != null && root.TryGetValue("openai", out var o) && o is IDictionary<object, object> od)
-            {
-                return (
-                    (od.TryGetValue("base_url", out var b) ? b?.ToString()?.Trim() : "") ?? "",
-                    (od.TryGetValue("api_key", out var k) ? k?.ToString()?.Trim() : "") ?? "",
-                    (od.TryGetValue("model", out var m) ? m?.ToString()?.Trim() : "") ?? ""
-                );
-            }
-            return ("", "", "");
+            return new DeserializerBuilder().Build()
+                .Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
         }
         catch (Exception exc)
         {
             Console.WriteLine($"警告：config.yml 读取失败（{exc.Message}），回退到环境变量。");
-            return ("", "", "");
+            return null;
         }
     }
 
-    /// <summary>调用对话接口，返回文本。dry_run 时返回模拟响应。</summary>
+    private static string Get(IDictionary<object, object> d, string key)
+        => d.TryGetValue(key, out var v) ? v?.ToString()?.Trim() ?? "" : "";
+
+    /// <summary>调用对话接口，返回文本。dry_run 时返回模拟响应。maxTokens&lt;=0 时自动使用模型上限（MaxOutputTokens）。</summary>
     public async Task<string> ChatAsync(List<ChatMessage> messages,
-        double temperature = 0.3, int maxTokens = 255000, bool jsonMode = false, double topP = 0.9)
+        double temperature = 0.3, int maxTokens = 0, bool jsonMode = false, double topP = 0.9)
     {
         if (_dryRun)
             return MockChat(messages);
 
+        var mt = maxTokens > 0 ? maxTokens : MaxOutputTokens;
         var payload = new Dictionary<string, object>
         {
             ["model"] = Model,
             ["messages"] = messages.Select(m => new { role = m.Role, content = m.Content }),
             ["temperature"] = temperature,
-            ["max_tokens"] = maxTokens,
+            ["max_tokens"] = mt,
             ["top_p"] = topP,
         };
         if (jsonMode)
@@ -109,7 +183,7 @@ public class LLMClient
 
     /// <summary>调用接口并要求返回 JSON，返回解析后的对象（解析失败时自动重试一次）。</summary>
     public async Task<JsonElement> ChatJsonAsync(List<ChatMessage> messages,
-        double temperature = 0.2, int maxTokens = 255000, double topP = 0.9)
+        double temperature = 0.2, int maxTokens = 0, double topP = 0.9)
     {
         var text = await ChatAsync(messages, temperature, maxTokens, jsonMode: true, topP);
         try

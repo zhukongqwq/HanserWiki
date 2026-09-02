@@ -86,33 +86,112 @@
             <TabControl x:Name="SettingsTabs" Grid.Row="1" Background="Transparent" BorderThickness="0">
             <!-- API 配置 -->
             <TabItem Header="API 配置">
-                <Grid Margin="4,14,4,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="90"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="2">
+                    <StackPanel Margin="2">
+                        <TextBlock Text="全局默认（所有 AI 回退到此配置；留空项回退环境变量）"
+                                   FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="2,6,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="接口地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="BaseUrlBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"
+                                     ToolTip="OpenAI 兼容接口地址，如 https://api.deepseek.com/v1"/>
+                            <TextBlock Grid.Row="1" Text="API 密钥" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="ApiKeyBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="2" Text="模型名" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="ModelBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="3" Text="最大输出" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="MaxTokensBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"
+                                     ToolTip="最大输出 token 数（空 = 按模型自动取上限）"/>
+                        </Grid>
 
-                    <TextBlock Grid.Row="0" Text="接口地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="BaseUrlBox" Style="{StaticResource FieldBox}"
-                             Margin="0,0,0,12" ToolTip="OpenAI 兼容接口地址，如 https://api.deepseek.com/v1"/>
+                        <Rectangle Height="1" Fill="#E5E7EB" Margin="0,10"/>
 
-                    <TextBlock Grid.Row="1" Text="API 密钥" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="ApiKeyBox" Style="{StaticResource FieldBox}"
-                             Margin="0,0,0,12" ToolTip="API 密钥（保存到本地 config.yml，不会被提交）"/>
+                        <TextBlock Text="Project Bunny（关键词提取，可选独立配置）"
+                                   FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="2,6,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="接口地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="BunnyBaseUrlBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="1" Text="API 密钥" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="BunnyApiKeyBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="2" Text="模型名" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="BunnyModelBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="3" Text="最大输出" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="BunnyMaxTokensBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                        </Grid>
 
-                    <TextBlock Grid.Row="2" Text="模型名" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="ModelBox" Style="{StaticResource FieldBox}"
-                             Margin="0,0,0,12" ToolTip="如 deepseek-v4-flash / deepseek-chat"/>
+                        <Rectangle Height="1" Fill="#E5E7EB" Margin="0,10"/>
 
-                    <TextBlock Grid.Row="3" Grid.Column="1" Foreground="#9CA3AF" FontSize="11" TextWrapping="Wrap"
-                               Text="保存到 HanserWpf/config.yml。留空的项回退到环境变量 OPENAI_BASE_URL / OPENAI_API_KEY / OPENAI_MODEL；下次提问时生效。"/>
-                </Grid>
+                        <TextBlock Text="Prometheus（文档锚定，可选独立配置）"
+                                   FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="2,6,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="接口地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="PrometheusBaseUrlBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="1" Text="API 密钥" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="PrometheusApiKeyBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="2" Text="模型名" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="PrometheusModelBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="3" Text="最大输出" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="PrometheusMaxTokensBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="#E5E7EB" Margin="0,10"/>
+
+                        <TextBlock Text="hanser（最终回答，可选独立配置）"
+                                   FontWeight="SemiBold" Foreground="#374151" FontSize="13" Margin="2,6,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="接口地址" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="HanserBaseUrlBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="1" Text="API 密钥" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="HanserApiKeyBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="2" Text="模型名" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="HanserModelBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="3" Text="最大输出" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="HanserMaxTokensBox" Style="{StaticResource FieldBox}" Margin="0,0,0,8"/>
+                        </Grid>
+
+                        <TextBlock Foreground="#9CA3AF" FontSize="11" TextWrapping="Wrap" Margin="2,10,0,6"
+                                   Text="AI 级配置为覆盖层：未填写的 AI 回退到「全局默认」；「最大输出」留空按模型自动取上限。保存后下次提问生效。"/>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- jieba 词库 -->
