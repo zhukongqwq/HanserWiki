@@ -9,6 +9,8 @@ import com.zhukongqwq.hanser.core.LibraryDb
 import com.zhukongqwq.hanser.core.Tokenizer
 import com.zhukongqwq.hanser.db.AndroidSqlDb
 import java.io.File
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
  * 应用核心装配：以应用私有目录为根（数据本地化），
@@ -33,6 +35,9 @@ object AppCore {
         private set
     lateinit var githubSync: GitHubSync
         private set
+
+    /** 单线程索引执行器：启动增量扫描 / 重建索引 / 文档更新后索引排队执行，避免并发写库导致 Cursor 越界。 */
+    private val indexExecutor = Executors.newSingleThreadExecutor { r -> Thread(r, "hanser-index") }
 
     val isReady: Boolean get() = ::library.isInitialized
 
@@ -59,14 +64,23 @@ object AppCore {
         githubSync = GitHubSync(dataDir, cacheFile, onDownloaded = { indexInBackground() })
     }
 
-    /** 后台增量扫描文档库（启动与文档更新后调用）。 */
+    /** 后台增量扫描文档库（启动与文档更新后调用）：进入索引队列串行执行。 */
     fun indexInBackground() {
-        Thread {
+        indexExecutor.execute {
             runCatching {
                 ensureDictLoaded()
                 Indexer(library, dataDir).indexDocuments()
             }
-        }.start()
+        }
+    }
+
+    /** 重建索引（force 全量重分词）：排队执行并阻塞等待结果（供 UI 显示统计）。 */
+    fun rebuildIndexNow(): Indexer.Stats {
+        val task = java.util.concurrent.Callable<Indexer.Stats> {
+            ensureDictLoaded()
+            Indexer(library, dataDir).indexDocuments(force = true)
+        }
+        return indexExecutor.submit(task).get()
     }
 
     /** 确保词典已加载（从 assets 读 dict.txt + userdict；幂等，可在后台线程调用）。 */

@@ -1,19 +1,19 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "date": "2026-09-07",
   "changelog": [
-    "文档更新改为文件级核对（Windows / Android）：每次点击都逐文件 sha256 比对，只下载缺失或损坏的文件",
-    "Android：文档更新在后台前台服务中执行，通知栏显示下载进度，可切后台继续",
-    "Android：新增重建索引按钮；设置页内嵌下载进度条"
+    "Android：文档更新息屏保活（部分唤醒锁，后台下载不中断）",
+    "Android：下载结果日志默认折叠、可展开",
+    "Android：修复重建索引报错 Index 1 requested with size of 1（索引任务单线程串行化，消除并发写库）"
   ],
   "apps": {
     "windows": {
-      "version": "1.0.7",
-      "file": "Hanser-AI-Wiki-v1.0.7.zip"
+      "version": "1.0.8",
+      "file": "Hanser-AI-Wiki-v1.0.8.zip"
     },
     "android": {
-      "version": "0.1.5",
-      "file": "Hanser-AI-Wiki-v0.1.5.apk"
+      "version": "0.1.6",
+      "file": "Hanser-AI-Wiki-v0.1.6.apk"
     }
   }
 }

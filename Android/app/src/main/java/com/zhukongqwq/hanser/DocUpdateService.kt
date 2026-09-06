@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 
@@ -32,6 +33,7 @@ class DocUpdateService : Service() {
     }
 
     private lateinit var notificationManager: NotificationManager
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -51,10 +53,15 @@ class DocUpdateService : Service() {
             return START_NOT_STICKY
         }
         DocUpdateManager.begin()
+        // 持有部分唤醒锁：息屏/后台时保持 CPU 运行，保证下载不中断
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Hanser:doc_update")
+            .apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) } // 最长 1 小时
         startForeground(NOTIFICATION_ID, buildNotification("准备检查更新…", 0, 0, ""))
         Thread {
-            var resultText: String
             try {
+                var resultText: String
+                try {
                 val logs = StringBuilder()
                 val r = AppCore.githubSync.run(
                     repoUrl,
@@ -99,6 +106,10 @@ class DocUpdateService : Service() {
             )
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            } finally {
+                wakeLock?.let { if (it.isHeld) it.release() }
+                wakeLock = null
+            }
         }.start()
         return START_NOT_STICKY
     }

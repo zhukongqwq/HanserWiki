@@ -202,13 +202,13 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
         DocUpdateService.start(context, AppCore.config.loadUpdateUrl())
     }
 
-    // 重建索引：强制全量重分词（后台执行）
+    // 重建索引：强制全量重分词（进入索引队列串行执行，避免与增量扫描并发）
     fun runRebuildIndex() {
         if (updateBusy || DocUpdateManager.state.value.running) return
         updateBusy = true
         scope.launch(Dispatchers.IO) {
             val text = try {
-                val st = Indexer(AppCore.library, AppCore.dataDir).indexDocuments(force = true)
+                val st = AppCore.rebuildIndexNow()
                 "重建索引完成：新增 ${st.added}，更新 ${st.updated}，重分词 ${st.reindexed}，" +
                         "失败 ${st.failed}；库中共 ${st.total} 篇文档"
             } catch (e: Exception) {
@@ -528,12 +528,29 @@ private fun SettingsDialog(
                     )
                 }
                 docSummary?.let { s ->
+                    val lines = s.lineSequence().toList()
+                    val head = lines.firstOrNull().orEmpty()
+                    val rest = lines.drop(1).joinToString("\n").trim('\n')
+                    var logExpanded by remember(s) { mutableStateOf(false) }
                     Surface(
                         color = AccentSoft, shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
-                        Text(s, color = TextPrimary, fontSize = 12.sp, lineHeight = 17.sp,
-                            modifier = Modifier.padding(8.dp))
+                        Column(Modifier.padding(8.dp)) {
+                            Text(head, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            if (logExpanded && rest.isNotBlank()) {
+                                Text(rest, color = TextPrimary, fontSize = 11.sp, lineHeight = 16.sp,
+                                    modifier = Modifier.padding(top = 4.dp))
+                            }
+                            if (rest.isNotBlank()) {
+                                TextButton(onClick = { logExpanded = !logExpanded },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                                    modifier = Modifier.padding(top = 2.dp)) {
+                                    Text(if (logExpanded) "收起日志 ▲" else "展开下载日志 ▼",
+                                        color = AccentDeep, fontSize = 11.sp)
+                                }
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
