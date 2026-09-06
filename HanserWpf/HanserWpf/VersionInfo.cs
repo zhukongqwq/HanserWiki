@@ -43,16 +43,27 @@ public class VersionInfo
 
     public static VersionInfo Load()
     {
-        var path = Path.Combine(Paths.WpfRoot, "version.json");
-        if (!File.Exists(path))
-            return new VersionInfo();
-        try
+        // 版本文件在 exe 旁（发布 zip 内已随包），开发环境在仓库收纳根的上级（HanserWiki 仓库根）
+        foreach (var candidate in new[]
+                 {
+                     Path.Combine(Paths.WpfRoot, "version.json"),
+                     Path.Combine(Paths.Root, "version.json"),
+                     Path.Combine(Directory.GetParent(Paths.Root)?.FullName ?? "", "version.json"),
+                 })
         {
-            return JsonSerializer.Deserialize<VersionInfo>(File.ReadAllText(path), JsonOptions) ?? new VersionInfo();
+            if (!File.Exists(candidate))
+                continue;
+            try
+            {
+                var info = JsonSerializer.Deserialize<VersionInfo>(File.ReadAllText(candidate), JsonOptions);
+                if (info != null)
+                    return info;
+            }
+            catch
+            {
+                // 该候选损坏则继续尝试下一个
+            }
         }
-        catch
-        {
-            return new VersionInfo();
-        }
+        return new VersionInfo();
     }
 }

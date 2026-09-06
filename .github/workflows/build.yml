@@ -1,7 +1,8 @@
 name: 构建与发布
 
 # 推送 main 自动构建验证并发布；手动触发或推送 v* 标签同样构建并发布
-# version.json 双平台版本：zip（Windows）与 apk（Android）发布在同一个 Release
+# 单仓库布局：HanserWpf/（Windows 工程）与 Android/（安卓工程）同在根；
+# version.json 位于仓库根（apps.windows / apps.android 双平台版本，zip + apk 发布在同一 Release）
 on:
   workflow_dispatch:
   push:
@@ -14,7 +15,7 @@ jobs:
     permissions:
       contents: write # 创建 Release 需要写权限
     steps:
-      - name: 检出代码（发布仓库 = Windows 工程）
+      - name: 检出代码（HanserWiki：HanserWpf/ + Android/）
         uses: actions/checkout@v4
 
       - name: 安装 .NET 10
@@ -22,7 +23,7 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: 读取双平台版本与更新日志（来自 version.json）
+      - name: 读取双平台版本与更新日志（仓库根 version.json）
         id: version
         shell: pwsh
         run: |
@@ -49,25 +50,20 @@ jobs:
           "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: 发布 Windows（win-x64 自包含，非单文件）
-        run: dotnet publish HanserWpf/HanserWpf.csproj -c Release -r win-x64 --self-contained true -o dist
+        run: dotnet publish HanserWpf/HanserWpf/HanserWpf.csproj -c Release -r win-x64 --self-contained true -o dist
 
-      - name: 复制 jieba 词典到发布目录（运行时分词需要）
+      - name: 复制运行资源到发布目录（jieba 词典 + version.json 随包）
         shell: pwsh
         run: |
-          Copy-Item -Recurse -Force jieba-resources dist/
+          Copy-Item -Recurse -Force HanserWpf/jieba-resources dist/
+          Copy-Item -Force version.json dist/
 
       - name: 打包 Windows zip
         shell: pwsh
         run: |
           Compress-Archive -Path dist/* -DestinationPath "${{ steps.version.outputs.win_file }}" -Force
 
-      # ---- Android 构建（源码在 AI-Hanser 仓库的 Android/ 目录） ----
-      - name: 检出 Android 工程（AI-Hanser）
-        uses: actions/checkout@v4
-        with:
-          repository: zhukongqwq/AI-Hanser
-          path: ai
-
+      # ---- Android 构建（源码在本仓库 Android/ 目录） ----
       - name: 安装 JDK 17
         uses: actions/setup-java@v4
         with:
@@ -82,12 +78,11 @@ jobs:
       - name: 安装 Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 构建 Android debug apk（随包附带签名，可直接安装）
+      - name: 构建 Android debug apk（debug 签名可直接安装）
         shell: pwsh
         run: |
-          cd ai/Android
-          gradle :app:assembleDebug --console=plain --no-daemon
-          Copy-Item app/build/outputs/apk/debug/app-debug.apk "../../${{ steps.version.outputs.apk_file }}" -Force
+          gradle -p Android :app:assembleDebug --console=plain --no-daemon
+          Copy-Item Android/app/build/outputs/apk/debug/app-debug.apk "${{ steps.version.outputs.apk_file }}" -Force
 
       - name: 创建 Release（Windows zip + Android apk 同挂一个 Release）
         uses: softprops/action-gh-release@v2

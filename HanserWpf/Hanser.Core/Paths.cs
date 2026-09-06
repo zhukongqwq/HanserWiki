@@ -8,7 +8,7 @@ public static class Paths
 {
     /// <summary>
     /// 项目根：发布版（DISTRIBUTION）恒为程序目录（数据自包含，不读开发环境数据）；
-    /// 开发版向上搜索同时含 Python 与 HanserWpf 的目录，找不到回退程序目录。
+    /// 开发版向上搜索含 HanserWpf 子目录的仓库根（HanserWiki 仓库重组后布局），找不到回退程序目录。
     /// </summary>
     public static string Root
     {
@@ -21,8 +21,7 @@ public static class Paths
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
-                if (Directory.Exists(Path.Combine(dir.FullName, "Python"))
-                    && Directory.Exists(Path.Combine(dir.FullName, "HanserWpf")))
+                if (Directory.Exists(Path.Combine(dir.FullName, "HanserWpf")))
                     return dir.FullName;
                 dir = dir.Parent;
             }
@@ -32,7 +31,10 @@ public static class Paths
         }
     }
 
-    /// <summary>C# 版根目录：开发环境为 Root/HanserWpf；发布版（DISTRIBUTION）恒为程序目录本身（自包含）。</summary>
+    /// <summary>
+    /// 应用根：开发环境为仓库收纳根（HanserWiki/HanserWpf，含 data/userdict/config）；
+    /// 发布版（DISTRIBUTION）恒为程序目录本身（自包含）。
+    /// </summary>
     public static string WpfRoot
     {
         get
@@ -40,22 +42,20 @@ public static class Paths
 #if DISTRIBUTION
             return Root; // 发布版：exe 目录即应用根（不判断 HanserWpf 子目录，避免误判）
 #else
-            return Directory.Exists(Path.Combine(Root, "HanserWpf"))
-                ? Path.Combine(Root, "HanserWpf")
-                : Root;
+            return Root; // 开发版：收纳根即 C# 应用根（数据已并入）
 #endif
         }
     }
 
-    /// <summary>docx 文档目录（C# 版本地数据，与 Python 版分离）。</summary>
+    /// <summary>docx 文档目录（C# 版本地数据）。</summary>
     public static string DataDir => Path.Combine(WpfRoot, "data");
 
     /// <summary>SQLite 数据库文件（C# 版本地索引，表结构与 Python 版兼容）。</summary>
     public static string DbPath => Path.Combine(WpfRoot, "documents.db");
 
-    /// <summary>jieba 自定义词典（C# 版本地副本，与 Python 版各自维护）。</summary>
-    public static string UserDictPath => Path.Combine(Root, "HanserWpf", "userdict.txt");
+    /// <summary>jieba 自定义词典（C# 版本地副本）。</summary>
+    public static string UserDictPath => Path.Combine(WpfRoot, "userdict.txt");
 
     /// <summary>C# 版 AI 配置（本目录 config.yml，不存在则回退环境变量）。</summary>
-    public static string ConfigYmlPath => Path.Combine(Root, "HanserWpf", "config.yml");
+    public static string ConfigYmlPath => Path.Combine(WpfRoot, "config.yml");
 }
