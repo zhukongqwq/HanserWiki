@@ -14,7 +14,7 @@ public static class AppUpdate
     /// <summary>检查更新：返回 (是否有新版, 本地版本, 远程版本)。远程拉取失败时 Remote 为空串。</summary>
     public static async Task<(bool HasUpdate, string Local, string Remote)> CheckAsync(string? proxyPrefix)
     {
-        var local = VersionInfo.Load().Version;
+        var local = VersionInfo.Load().WindowsVersion;
         var url = string.IsNullOrWhiteSpace(proxyPrefix)
             ? VersionUrl
             : proxyPrefix.TrimEnd('/') + "/" + VersionUrl;

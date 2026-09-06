@@ -1,9 +1,19 @@
 {
-  "version": "1.0.5",
-  "date": "2026-09-01",
+  "version": "1.0.6",
+  "date": "2026-09-06",
   "changelog": [
-    "支持三个 AI 独立 API 配置（bunny / prometheus / hanser 各自的 base_url / api_key / model / max_tokens）",
-    "自动应用模型最大输出上限；新增 DeepSeek v4 系列（flash / pro / flash-vision-exp）上限 1M",
-    "max_tokens 留空时按模型自动取值，可在设置中手动覆盖"
-  ]
+    "更新体系：version.json 双平台版本（Windows / Android 各自独立检查、发布在同一 Release）",
+    "Android：新增文档库更新与软件更新功能；金色主题与图标对齐 Windows",
+    "修复：Android 启动崩溃（archive 未初始化 / jieba 词典 classloader 不可读）"
+  ],
+  "apps": {
+    "windows": {
+      "version": "1.0.6",
+      "file": "Hanser-AI-Wiki-v1.0.6.zip"
+    },
+    "android": {
+      "version": "0.1.4",
+      "file": "Hanser-AI-Wiki-v0.1.4.apk"
+    }
+  }
 }

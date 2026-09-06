@@ -30,7 +30,7 @@ public partial class SettingsWindow : Window
     private void LoadAbout()
     {
         var info = VersionInfo.Load();
-        AboutVersionText.Text = $"版本 {info.Version}（{info.Date}）";
+        AboutVersionText.Text = $"版本 {info.WindowsVersion}（{info.Date}）";
         AboutChangelogBox.Text = string.Join("\n", info.Changelog.Select(c => "• " + c));
     }
 

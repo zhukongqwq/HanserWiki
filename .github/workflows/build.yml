@@ -1,6 +1,7 @@
 name: 构建与发布
 
 # 推送 main 自动构建验证并发布；手动触发或推送 v* 标签同样构建并发布
+# version.json 双平台版本：zip（Windows）与 apk（Android）发布在同一个 Release
 on:
   workflow_dispatch:
   push:
@@ -13,7 +14,7 @@ jobs:
     permissions:
       contents: write # 创建 Release 需要写权限
     steps:
-      - name: 检出代码
+      - name: 检出代码（发布仓库 = Windows 工程）
         uses: actions/checkout@v4
 
       - name: 安装 .NET 10
@@ -21,22 +22,33 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: 读取版本号与更新日志（来自 version.json）
+      - name: 读取双平台版本与更新日志（来自 version.json）
         id: version
         shell: pwsh
         run: |
           $v = Get-Content -Raw version.json | ConvertFrom-Json
-          $version = $v.version
-          $body = "# Hanser AI Wiki v$version"
+          # Windows 版本优先取 apps.windows.version，兼容旧版顶层 version
+          $win = $v.version
+          if ($v.apps -and $v.apps.windows -and $v.apps.windows.version) { $win = $v.apps.windows.version }
+          $android = $win
+          if ($v.apps -and $v.apps.android -and $v.apps.android.version) { $android = $v.apps.android.version }
+          $winFile = "Hanser-AI-Wiki-v$win.zip"
+          if ($v.apps.windows.file) { $winFile = $v.apps.windows.file }
+          $apkFile = "Hanser-AI-Wiki-v$android.apk"
+          if ($v.apps.android.file) { $apkFile = $v.apps.android.file }
+          $body = "# Hanser AI Wiki`n`nWindows $win · Android $android"
           if ($v.date) { $body += "`n`n发布日期：$($v.date)" }
           $body += "`n`n## 本版本更新日志`n"
           foreach ($c in $v.changelog) { $body += "- $c`n" }
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "version=$win" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "win_file=$winFile" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "android_version=$android" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "apk_file=$apkFile" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "body<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
-      - name: 发布（win-x64 自包含，非单文件）
+      - name: 发布 Windows（win-x64 自包含，非单文件）
         run: dotnet publish HanserWpf/HanserWpf.csproj -c Release -r win-x64 --self-contained true -o dist
 
       - name: 复制 jieba 词典到发布目录（运行时分词需要）
@@ -44,18 +56,48 @@ jobs:
         run: |
           Copy-Item -Recurse -Force jieba-resources dist/
 
-      - name: 打包 zip
+      - name: 打包 Windows zip
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/* -DestinationPath "Hanser-AI-Wiki-v${{ steps.version.outputs.version }}.zip" -Force
+          Compress-Archive -Path dist/* -DestinationPath "${{ steps.version.outputs.win_file }}" -Force
 
-      - name: 创建 Release（自动同步版本号与更新日志）
+      # ---- Android 构建（源码在 AI-Hanser 仓库的 Android/ 目录） ----
+      - name: 检出 Android 工程（AI-Hanser）
+        uses: actions/checkout@v4
+        with:
+          repository: zhukongqwq/AI-Hanser
+          path: ai
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: 安装 Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.0.0"
+
+      - name: 安装 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 构建 Android debug apk（随包附带签名，可直接安装）
+        shell: pwsh
+        run: |
+          cd ai/Android
+          gradle :app:assembleDebug --console=plain --no-daemon
+          Copy-Item app/build/outputs/apk/debug/app-debug.apk "../../${{ steps.version.outputs.apk_file }}" -Force
+
+      - name: 创建 Release（Windows zip + Android apk 同挂一个 Release）
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Hanser AI Wiki v${{ steps.version.outputs.version }}
           body: ${{ steps.version.outputs.body }}
-          files: Hanser-AI-Wiki-v${{ steps.version.outputs.version }}.zip
+          files: |
+            ${{ steps.version.outputs.win_file }}
+            ${{ steps.version.outputs.apk_file }}
           draft: false
           prerelease: false
           update_release_body: true # 同版本重复推送时更新 Release 而非失败
