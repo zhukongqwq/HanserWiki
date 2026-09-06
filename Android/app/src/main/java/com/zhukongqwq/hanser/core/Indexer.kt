@@ -27,18 +27,20 @@ class Indexer(
     private val root: File = dataDir.parentFile ?: dataDir
 
     /** 扫描并索引，返回统计。 */
-    fun indexDocuments(force: Boolean = false, log: (String) -> Unit = {}): Stats {
+    fun indexDocuments(force: Boolean = false, log: (String) -> Unit = {},
+                       onProgress: (done: Int, total: Int, current: String) -> Unit = { _, _, _ -> }): Stats {
         val files = dataDir.walkTopDown()
             .filter { it.isFile && it.extension.equals("docx", ignoreCase = true) }
             .sortedBy { it.absolutePath }
             .toList()
+        val totalFiles = files.size
 
         var added = 0; var updated = 0; var reindexed = 0
         var skipped = 0; var failed = 0
 
         val existing = HashSet<String>()
         var batch = 0
-        files.forEach { file ->
+        files.forEachIndexed { index, file ->
             val rel = relPath(file)
             existing.add(rel)
             val statMtime = file.lastModified() / 1000.0
@@ -70,6 +72,8 @@ class Indexer(
                 failed++
                 log("  [失败] $rel：${e.message}")
             }
+            // 进度：每处理完一篇回调一次（done 为已处理数，total 为扫描到的 docx 总数）
+            onProgress(index + 1, totalFiles, file.name)
         }
 
         lib.db.transaction {

@@ -74,11 +74,11 @@ object AppCore {
         }
     }
 
-    /** 重建索引（force 全量重分词）：排队执行并阻塞等待结果（供 UI 显示统计）。 */
-    fun rebuildIndexNow(): Indexer.Stats {
+    /** 重建索引（force 全量重分词）：排队执行并阻塞等待结果（供 UI 显示统计）；onProgress 上报进度。 */
+    fun rebuildIndexNow(onProgress: (done: Int, total: Int, current: String) -> Unit = { _, _, _ -> }): Indexer.Stats {
         val task = java.util.concurrent.Callable<Indexer.Stats> {
             ensureDictLoaded()
-            Indexer(library, dataDir).indexDocuments(force = true)
+            Indexer(library, dataDir).indexDocuments(force = true, onProgress = onProgress)
         }
         return indexExecutor.submit(task).get()
     }

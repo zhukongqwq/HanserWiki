@@ -1,18 +1,17 @@
 {
-  "version": "1.0.9",
+  "version": "1.0.10",
   "date": "2026-09-07",
   "changelog": [
-    "Android：修复重建索引 CursorIndexOutOfBoundsException——查询行改为构造时物化（彻底消除 cursor 延迟读），不再出现 Index 1 requested with a size of 1",
-    "Android：文档更新下载任务先就绪前台再持唤醒锁，onDestroy 兜底释放（息屏下载更稳）"
+    "Android：重建索引显示实时进度条（当前文件 x/y）+ 完成后统计提示弹窗"
   ],
   "apps": {
     "windows": {
-      "version": "1.0.9",
-      "file": "Hanser-AI-Wiki-v1.0.9.zip"
+      "version": "1.0.10",
+      "file": "Hanser-AI-Wiki-v1.0.10.zip"
     },
     "android": {
-      "version": "0.1.7",
-      "file": "Hanser-AI-Wiki-v0.1.7.apk"
+      "version": "0.1.8",
+      "file": "Hanser-AI-Wiki-v0.1.8.apk"
     }
   }
 }

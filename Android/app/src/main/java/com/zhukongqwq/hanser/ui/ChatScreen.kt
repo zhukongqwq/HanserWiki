@@ -175,6 +175,10 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
     var showDocSearch by remember { mutableStateOf(false) }
     var updateBusy by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<String?>(null) }
+    var reindexRunning by remember { mutableStateOf(false) }
+    var reindexDone by remember { mutableStateOf(0) }
+    var reindexTotal by remember { mutableStateOf(0) }
+    var reindexCurrent by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -202,19 +206,30 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
         DocUpdateService.start(context, AppCore.config.loadUpdateUrl())
     }
 
-    // 重建索引：强制全量重分词（进入索引队列串行执行，避免与增量扫描并发）
+    // 重建索引：强制全量重分词（索引队列串行执行），实时进度条 + 完成统计提示
     fun runRebuildIndex() {
-        if (updateBusy || DocUpdateManager.state.value.running) return
-        updateBusy = true
+        if (reindexRunning || DocUpdateManager.state.value.running) return
+        reindexRunning = true
+        reindexDone = 0
+        reindexTotal = 0
+        reindexCurrent = "准备中…"
         scope.launch(Dispatchers.IO) {
             val text = try {
-                val st = AppCore.rebuildIndexNow()
+                // 进度回调运行在索引线程：直接写 snapshot state（线程安全，Compose 自动重组）
+                val st = AppCore.rebuildIndexNow { done, total, current ->
+                    reindexDone = done
+                    reindexTotal = total
+                    reindexCurrent = current
+                }
                 "重建索引完成：新增 ${st.added}，更新 ${st.updated}，重分词 ${st.reindexed}，" +
                         "失败 ${st.failed}；库中共 ${st.total} 篇文档"
             } catch (e: Exception) {
                 "重建索引失败：${e.message}"
             }
-            withContext(Dispatchers.Main) { updateResult = text; updateBusy = false }
+            withContext(Dispatchers.Main) {
+                updateResult = text
+                reindexRunning = false
+            }
         }
     }
 
@@ -324,6 +339,10 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
             docTotal = docState.total,
             docCurrent = docState.current,
             docSummary = docState.summary,
+            reindexRunning = reindexRunning,
+            reindexDone = reindexDone,
+            reindexTotal = reindexTotal,
+            reindexCurrent = reindexCurrent,
             onDocUpdate = { startDocUpdate() },
             onAppUpdate = { runAppUpdate() },
             onRebuildIndex = { runRebuildIndex() }
@@ -396,6 +415,10 @@ private fun SettingsDialog(
     docTotal: Int = 0,
     docCurrent: String = "",
     docSummary: String? = null,
+    reindexRunning: Boolean = false,
+    reindexDone: Int = 0,
+    reindexTotal: Int = 0,
+    reindexCurrent: String = "",
     onDocUpdate: () -> Unit = {},
     onAppUpdate: () -> Unit = {},
     onRebuildIndex: () -> Unit = {}
@@ -488,14 +511,14 @@ private fun SettingsDialog(
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
-                        onClick = onDocUpdate, enabled = !docRunning,
+                        onClick = onDocUpdate, enabled = !docRunning && !reindexRunning,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentDeep)
                     ) { Text("📥 文档库更新", fontSize = 13.sp) }
                     OutlinedButton(
-                        onClick = onRebuildIndex, enabled = !docRunning,
+                        onClick = onRebuildIndex, enabled = !docRunning && !reindexRunning,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
@@ -504,7 +527,7 @@ private fun SettingsDialog(
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     OutlinedButton(
-                        onClick = onAppUpdate, enabled = !docRunning,
+                        onClick = onAppUpdate, enabled = !docRunning && !reindexRunning,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
@@ -523,6 +546,25 @@ private fun SettingsDialog(
                     Text(
                         if (docTotal > 0 && docCurrent.isNotEmpty()) "$docCurrent（$docDone/$docTotal）"
                         else docCurrent,
+                        color = TextSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                if (reindexRunning) {
+                    Text("正在重建索引…", color = TextSecondary, fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 8.dp))
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = {
+                            if (reindexTotal > 0) reindexDone.toFloat() / reindexTotal else 0f
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        color = Accent,
+                        trackColor = AccentSoft
+                    )
+                    Text(
+                        if (reindexTotal > 0 && reindexCurrent.isNotEmpty())
+                            "$reindexCurrent（$reindexDone/$reindexTotal）"
+                        else reindexCurrent,
                         color = TextSecondary, fontSize = 11.sp,
                         modifier = Modifier.padding(top = 4.dp)
                     )
