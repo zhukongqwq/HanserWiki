@@ -155,15 +155,17 @@ public static class GitHubSync
             listBytes = await resp.Content.ReadAsByteArrayAsync();
         }
 
-        // 2. 与本地缓存比对（sha256）
+        // 2. 与本地缓存比对（sha256）——仅作提示；每次仍做文件级核对（清单一致不跳过，保证本地完整性）
         var localListPath = Path.Combine(Paths.WpfRoot, ManifestFile);
         var listSha = Sha256Hex(listBytes);
         if (File.Exists(localListPath) && Sha256Hex(File.ReadAllBytes(localListPath)) == listSha)
         {
-            log?.Invoke($"  清单无变化（sha256 {listSha[..12]}…），无需更新。");
-            return result;
+            log?.Invoke($"  清单与上次一致（sha256 {listSha[..12]}…），仍将逐文件核对 sha256…");
         }
-        log?.Invoke($"  清单已更新（sha256 {listSha[..12]}…），开始比对本地文件…");
+        else
+        {
+            log?.Invoke($"  清单已更新（sha256 {listSha[..12]}…），开始核对本地文件…");
+        }
 
         // 3. 解析清单 {路径: sha256}
         var manifest = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

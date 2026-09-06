@@ -49,16 +49,46 @@ class GitHubSyncTest {
     }
 
     @Test
-    fun `清单无变化跳过且不回调`() {
+    fun `清单一致仍做文件级核对 不重复下载`() {
         val dataDir = tmp.newFolder("data")
         val cache = File(tmp.newFolder("meta"), ".sync-list.json")
         val dl = fakeDownloader()
         GitHubSync(dataDir, cache, {}, dl).run(repo) // 首次：下载并保存缓存
         var indexed = false
-        // 第二次共享同一缓存目录：清单一致 → 无需更新
+        // 第二次共享缓存：清单一致仍逐文件核对 → 本地一致则无下载，但照常触发增量索引
         val result = GitHubSync(dataDir, cache, { indexed = true }, dl).run(repo)
         assertEquals(0, result.added)
-        assertFalse(indexed)
+        assertEquals(0, result.updated)
+        assertTrue("核对后仍应触发增量索引", indexed)
+    }
+
+    @Test
+    fun `本地文件被篡改 清单一致也重新下载修复`() {
+        val dataDir = tmp.newFolder("data")
+        val cache = File(tmp.newFolder("meta"), ".sync-list.json")
+        val content = "hello docx 内容".toByteArray()
+        val dl = fakeDownloader(content)
+        GitHubSync(dataDir, cache, {}, dl).run(repo) // 首次下载
+        // 篡改本地文件（模拟损坏/被删改）
+        File(dataDir, "a.docx").writeBytes("被篡改的内容".toByteArray())
+        val result = GitHubSync(dataDir, cache, {}, dl).run(repo)
+        assertEquals(1, result.updated) // 清单一致但文件 sha 不符 → 重新下载修复
+        assertEquals("hello docx 内容", File(dataDir, "a.docx").readText())
+    }
+
+    @Test
+    fun `进度回调按文件推进`() {
+        val dataDir = tmp.newFolder("data")
+        val cache = File(tmp.newFolder("meta"), ".sync-list.json")
+        val progress = ArrayList<Triple<Int, Int, String>>()
+        GitHubSync(dataDir, cache, {}, fakeDownloader()).run(repo) { d, t, c ->
+            progress.add(Triple(d, t, c))
+        }
+        assertTrue("应有进度回调", progress.isNotEmpty())
+        // 最后回调 = 完成（done==total），total=1（清单仅一个文件）
+        val last = progress.last()
+        assertEquals(last.second, last.first)
+        assertEquals("a.docx", last.third)
     }
 
     @Test

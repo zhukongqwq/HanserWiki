@@ -92,10 +92,12 @@ class GitHubSync(
     }
 
     /**
-     * 执行检查更新（阻塞）。流程：清单 → 缓存比对 → 本地 sha256 比对 → 增量下载 → 保存缓存 → 增量索引。
-     * 调用方负责放到后台线程（协程 IO）。
+     * 执行检查更新（阻塞）。流程：清单 → 逐个文件 sha256 核对 → 只下载缺失/不一致 → 保存缓存 → 增量索引。
+     * 每次调用都做文件级核对（不因清单缓存一致而跳过，保证本地文件完整性与清单一致）。
+     * 调用方负责放到后台线程（协程 / 前台服务）。
      */
-    fun run(repoUrl: String, log: (String) -> Unit = {}): SyncResult {
+    fun run(repoUrl: String, log: (String) -> Unit = {},
+            onProgress: (done: Int, total: Int, current: String) -> Unit = { _, _, _ -> }): SyncResult {
         val result = SyncResult()
         val parsed = parseUrl(repoUrl)
         val listUrl = listUrl(repoUrl)
@@ -113,14 +115,13 @@ class GitHubSync(
         }
         val listSha = sha256Hex(listBytes)
 
-        // 2. 与本地缓存比对
-        if (cacheFile.exists() && sha256Hex(cacheFile.readBytes()) == listSha) {
-            log("  清单无变化（sha256 ${listSha.take(12)}…），无需更新。")
-            return result
+        // 2. 解析清单 {路径: sha256}（每次都做文件级核对：清单缓存一致仅作提示，不跳过核对）
+        val cacheSame = cacheFile.exists() && sha256Hex(cacheFile.readBytes()) == listSha
+        if (cacheSame) {
+            log("  清单与上次一致（sha256 ${listSha.take(12)}…），仍将逐文件核对 sha256…")
+        } else {
+            log("  清单已更新（sha256 ${listSha.take(12)}…），开始核对本地文件…")
         }
-        log("  清单已更新（sha256 ${listSha.take(12)}…），开始比对本地文件…")
-
-        // 3. 解析清单 {路径: sha256}
         val manifest = LinkedHashMap<String, String>()
         try {
             val obj = JSONObject(String(listBytes, Charsets.UTF_8))
@@ -150,6 +151,7 @@ class GitHubSync(
 
         // 5. 逐个下载（raw + 镜像），校验 sha256
         dataDir.mkdirs()
+        val totalCount = toDownload.size
         toDownload.forEachIndexed { i, (path, sha) ->
             val rel = normalizeRel(path)!!
             val dest = File(dataDir, rel)
@@ -157,7 +159,8 @@ class GitHubSync(
                 // 仓库路径统一为 data/{rel}（兼容清单键 data/ 与 ../data/ 两种前缀）
                 val encoded = ("data/$rel").split('/').joinToString("/") { URLEncoder.encode(it, "UTF-8") }
                 val rawUrl = proxy + "https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/$DEFAULT_BRANCH/$encoded"
-                log("  [下载] $rel（${i + 1}/${toDownload.size}）…")
+                log("  [下载] $rel（${i + 1}/$totalCount）…")
+                onProgress(i, totalCount, rel) // 开始下载当前文件
                 val bytes = downloader(rawUrl)
                 val actualSha = sha256Hex(bytes)
                 if (!actualSha.equals(sha, ignoreCase = true)) {
@@ -169,6 +172,7 @@ class GitHubSync(
                 dest.parentFile?.mkdirs()
                 dest.writeBytes(bytes)
                 if (isUpdate) result.updated++ else result.added++
+                onProgress(i + 1, totalCount, rel) // 当前文件完成
                 log("  [完成] $rel（${if (isUpdate) "更新" else "新增"}，${bytes.size / 1024} KB，sha256 校验通过）")
             } catch (e: Exception) {
                 result.failed++

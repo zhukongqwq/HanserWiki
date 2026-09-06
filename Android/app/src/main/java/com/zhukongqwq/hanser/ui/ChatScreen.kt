@@ -58,9 +58,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zhukongqwq.hanser.AppCore
+import com.zhukongqwq.hanser.DocUpdateManager
+import com.zhukongqwq.hanser.DocUpdateService
 import com.zhukongqwq.hanser.MainViewModel
 import com.zhukongqwq.hanser.core.AppUpdate
 import com.zhukongqwq.hanser.core.EndpointConfig
+import com.zhukongqwq.hanser.core.Indexer
 import com.zhukongqwq.hanser.ui.HanserColors.Accent
 import com.zhukongqwq.hanser.ui.HanserColors.AccentDeep
 import com.zhukongqwq.hanser.ui.HanserColors.AccentSoft
@@ -175,24 +178,41 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val docState by DocUpdateManager.state.collectAsState()
 
-    // 文档库更新：GitHub list.json 增量拉取（含 sha 校验与增量索引）
-    fun runDocUpdate() {
-        if (updateBusy) return
+    // 通知权限（Android 13+）：授权回调后启动文档更新（拒绝也继续，仅无通知）
+    val notifPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) {
+        DocUpdateService.start(context, AppCore.config.loadUpdateUrl())
+    }
+
+    // 文档库更新：前台服务后台下载（通知栏进度；App 前台时设置页内嵌进度）
+    fun startDocUpdate() {
+        if (DocUpdateManager.state.value.running) return
+        DocUpdateManager.clearSummary()
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notifPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        DocUpdateService.start(context, AppCore.config.loadUpdateUrl())
+    }
+
+    // 重建索引：强制全量重分词（后台执行）
+    fun runRebuildIndex() {
+        if (updateBusy || DocUpdateManager.state.value.running) return
         updateBusy = true
         scope.launch(Dispatchers.IO) {
             val text = try {
-                val logs = StringBuilder()
-                val r = AppCore.githubSync.run(AppCore.config.loadUpdateUrl()) { logs.appendLine(it) }
-                val err = r.errors.take(3).joinToString("\n")
-                buildString {
-                    appendLine("文档更新完成：新增 ${r.added}，更新 ${r.updated}，失败 ${r.failed}")
-                    appendLine()
-                    append(logs)
-                    if (err.isNotEmpty()) appendLine("失败明细：\n$err")
-                }
+                val st = Indexer(AppCore.library, AppCore.dataDir).indexDocuments(force = true)
+                "重建索引完成：新增 ${st.added}，更新 ${st.updated}，重分词 ${st.reindexed}，" +
+                        "失败 ${st.failed}；库中共 ${st.total} 篇文档"
             } catch (e: Exception) {
-                "文档更新失败：${e.message}"
+                "重建索引失败：${e.message}"
             }
             withContext(Dispatchers.Main) { updateResult = text; updateBusy = false }
         }
@@ -299,9 +319,14 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
     if (showSettings) {
         SettingsDialog(
             onDismiss = { showSettings = false },
-            updateBusy = updateBusy,
-            onDocUpdate = { runDocUpdate() },
-            onAppUpdate = { runAppUpdate() }
+            docRunning = docState.running,
+            docDone = docState.done,
+            docTotal = docState.total,
+            docCurrent = docState.current,
+            docSummary = docState.summary,
+            onDocUpdate = { startDocUpdate() },
+            onAppUpdate = { runAppUpdate() },
+            onRebuildIndex = { runRebuildIndex() }
         )
     }
     // 更新结果对话框
@@ -366,9 +391,14 @@ private fun DocListDialog(docs: List<com.zhukongqwq.hanser.UiDoc>, onDismiss: ()
 @Composable
 private fun SettingsDialog(
     onDismiss: () -> Unit,
-    updateBusy: Boolean = false,
+    docRunning: Boolean = false,
+    docDone: Int = 0,
+    docTotal: Int = 0,
+    docCurrent: String = "",
+    docSummary: String? = null,
     onDocUpdate: () -> Unit = {},
-    onAppUpdate: () -> Unit = {}
+    onAppUpdate: () -> Unit = {},
+    onRebuildIndex: () -> Unit = {}
 ) {
     val cfg = AppCore.config
     var gBase by remember { mutableStateOf("") }
@@ -454,29 +484,56 @@ private fun SettingsDialog(
                         focusedBorderColor = Accent, unfocusedBorderColor = Border)
                 )
 
-                // 更新入口：文档库更新 + 软件更新
+                // 更新与维护入口：文档库更新 / 重建索引 / 软件更新
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
-                        onClick = onDocUpdate, enabled = !updateBusy,
+                        onClick = onDocUpdate, enabled = !docRunning,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentDeep)
                     ) { Text("📥 文档库更新", fontSize = 13.sp) }
                     OutlinedButton(
-                        onClick = onAppUpdate, enabled = !updateBusy,
+                        onClick = onRebuildIndex, enabled = !docRunning,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentDeep)
+                    ) { Text("🔁 重建索引", fontSize = 13.sp) }
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    OutlinedButton(
+                        onClick = onAppUpdate, enabled = !docRunning,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentDeep)
                     ) { Text("⬇ 软件更新", fontSize = 13.sp) }
                 }
-                if (updateBusy) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                        CircularProgressIndicator(Modifier.size(14.dp), color = Accent, strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Text("正在更新…请稍候", color = TextSecondary, fontSize = 12.sp)
+                if (docRunning) {
+                    Text("正在下载文档…可退到后台继续（通知栏查看进度）", color = TextSecondary, fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 8.dp))
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { if (docTotal > 0) docDone.toFloat() / docTotal else 0f },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        color = Accent,
+                        trackColor = AccentSoft
+                    )
+                    Text(
+                        if (docTotal > 0 && docCurrent.isNotEmpty()) "$docCurrent（$docDone/$docTotal）"
+                        else docCurrent,
+                        color = TextSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                docSummary?.let { s ->
+                    Surface(
+                        color = AccentSoft, shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        Text(s, color = TextPrimary, fontSize = 12.sp, lineHeight = 17.sp,
+                            modifier = Modifier.padding(8.dp))
                     }
                 }
                 Spacer(Modifier.height(6.dp))

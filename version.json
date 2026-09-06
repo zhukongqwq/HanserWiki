@@ -1,19 +1,19 @@
 {
-  "version": "1.0.6",
-  "date": "2026-09-06",
+  "version": "1.0.7",
+  "date": "2026-09-07",
   "changelog": [
-    "更新体系：version.json 双平台版本（Windows / Android 各自独立检查、发布在同一 Release）",
-    "Android：新增文档库更新与软件更新功能；金色主题与图标对齐 Windows",
-    "修复：Android 启动崩溃（archive 未初始化 / jieba 词典 classloader 不可读）"
+    "文档更新改为文件级核对（Windows / Android）：每次点击都逐文件 sha256 比对，只下载缺失或损坏的文件",
+    "Android：文档更新在后台前台服务中执行，通知栏显示下载进度，可切后台继续",
+    "Android：新增重建索引按钮；设置页内嵌下载进度条"
   ],
   "apps": {
     "windows": {
-      "version": "1.0.6",
-      "file": "Hanser-AI-Wiki-v1.0.6.zip"
+      "version": "1.0.7",
+      "file": "Hanser-AI-Wiki-v1.0.7.zip"
     },
     "android": {
-      "version": "0.1.4",
-      "file": "Hanser-AI-Wiki-v0.1.4.apk"
+      "version": "0.1.5",
+      "file": "Hanser-AI-Wiki-v0.1.5.apk"
     }
   }
 }
