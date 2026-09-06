@@ -49,37 +49,32 @@ class AndroidSqlDb(file: File) : SqlDb {
         db.close()
     }
 
-    private class AndroidRow(private val c: Cursor) : SqlDb.Row {
-        private val names: Map<String, Int> =
-            c.columnNames.mapIndexed { i, n -> n.lowercase() to i }.toMap()
-
-        private fun idx(col: String): Int = names[col.lowercase()] ?: -1
-
-        override fun getString(col: String): String {
-            val i = idx(col)
-            return if (i < 0) "" else c.getString(i) ?: ""
-        }
-
-        override fun getLong(col: String): Long {
-            val i = idx(col)
-            return if (i < 0) 0 else c.getLong(i)
-        }
-
-        override fun getDouble(col: String): Double {
-            val i = idx(col)
-            return if (i < 0) 0.0 else c.getDouble(i)
-        }
-
-        override fun get(col: String): Any? {
-            val i = idx(col)
-            return if (i < 0) null else when (c.getType(i)) {
-                Cursor.FIELD_TYPE_INTEGER -> c.getLong(i)
-                Cursor.FIELD_TYPE_FLOAT -> c.getDouble(i)
-                Cursor.FIELD_TYPE_NULL -> null
-                else -> c.getString(i)
+    /**
+     * 物化行：构造时（cursor 位于当前行）把整行列值读入 Map。
+     * 彻底避免「延迟读 cursor」引发的行位置错乱（CursorIndexOutOfBoundsException）。
+     */
+    private class AndroidRow(cursor: Cursor) : SqlDb.Row {
+        private val values: Map<String, Any?> = run {
+            val m = HashMap<String, Any?>()
+            val names = cursor.columnNames
+            for (i in names.indices) {
+                m[names[i].lowercase()] = when (cursor.getType(i)) {
+                    Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(i)
+                    Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(i)
+                    Cursor.FIELD_TYPE_NULL -> null
+                    Cursor.FIELD_TYPE_BLOB -> cursor.getBlob(i)
+                    else -> cursor.getString(i)
+                }
             }
+            m
         }
 
-        override fun columnNames(): Set<String> = names.keys
+        private fun v(col: String): Any? = values[col.lowercase()]
+
+        override fun getString(col: String): String = v(col)?.toString() ?: ""
+        override fun getLong(col: String): Long = (v(col) as? Number)?.toLong() ?: 0L
+        override fun getDouble(col: String): Double = (v(col) as? Number)?.toDouble() ?: 0.0
+        override fun get(col: String): Any? = v(col)
+        override fun columnNames(): Set<String> = values.keys
     }
 }

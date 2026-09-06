@@ -37,6 +37,12 @@ class DocUpdateService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onDestroy() {
+        super.onDestroy()
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
+    }
+
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -53,11 +59,15 @@ class DocUpdateService : Service() {
             return START_NOT_STICKY
         }
         DocUpdateManager.begin()
-        // 持有部分唤醒锁：息屏/后台时保持 CPU 运行，保证下载不中断
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Hanser:doc_update")
-            .apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) } // 最长 1 小时
         startForeground(NOTIFICATION_ID, buildNotification("准备检查更新…", 0, 0, ""))
+        // 前台就绪后持部分唤醒锁：息屏/后台时保持 CPU 运行，保证下载不中断
+        try {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Hanser:doc_update")
+                .apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) } // 最长 1 小时
+        } catch (_: Exception) {
+            wakeLock = null // 个别机型获取失败不阻塞下载
+        }
         Thread {
             try {
                 var resultText: String

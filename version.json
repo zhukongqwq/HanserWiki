@@ -1,19 +1,18 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "date": "2026-09-07",
   "changelog": [
-    "Android：文档更新息屏保活（部分唤醒锁，后台下载不中断）",
-    "Android：下载结果日志默认折叠、可展开",
-    "Android：修复重建索引报错 Index 1 requested with size of 1（索引任务单线程串行化，消除并发写库）"
+    "Android：修复重建索引 CursorIndexOutOfBoundsException——查询行改为构造时物化（彻底消除 cursor 延迟读），不再出现 Index 1 requested with a size of 1",
+    "Android：文档更新下载任务先就绪前台再持唤醒锁，onDestroy 兜底释放（息屏下载更稳）"
   ],
   "apps": {
     "windows": {
-      "version": "1.0.8",
-      "file": "Hanser-AI-Wiki-v1.0.8.zip"
+      "version": "1.0.9",
+      "file": "Hanser-AI-Wiki-v1.0.9.zip"
     },
     "android": {
-      "version": "0.1.6",
-      "file": "Hanser-AI-Wiki-v0.1.6.apk"
+      "version": "0.1.7",
+      "file": "Hanser-AI-Wiki-v0.1.7.apk"
     }
   }
 }
