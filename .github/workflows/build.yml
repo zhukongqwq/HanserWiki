@@ -88,11 +88,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          name: Hanser AI Wiki v${{ steps.version.outputs.version }}
+          name: Hanser AI Wiki Windows v${{ steps.version.outputs.version }} · Android v${{ steps.version.outputs.android_version }}
           body: ${{ steps.version.outputs.body }}
           files: |
             ${{ steps.version.outputs.win_file }}
             ${{ steps.version.outputs.apk_file }}
           draft: false
           prerelease: false
+          overwrite: true # 单端发版（如仅 Android）时同名资产（zip）以新内容覆盖
           update_release_body: true # 同版本重复推送时更新 Release 而非失败

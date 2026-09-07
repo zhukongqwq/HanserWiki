@@ -280,7 +280,7 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
                     modifier = Modifier.weight(1f),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
                 ) {
-                    items(messages, key = { it.content.hashCode().toString() + it.role }) { m ->
+                    items(messages, key = { it.id }) { m ->
                         MessageBubble(m) { viewModel.toggleDocs(m) }
                     }
                     stage?.let { item { StageBubble(it) } }

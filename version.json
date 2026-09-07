@@ -2,7 +2,7 @@
   "version": "1.0.10",
   "date": "2026-09-07",
   "changelog": [
-    "Android：重建索引显示实时进度条（当前文件 x/y）+ 完成后统计提示弹窗"
+    "Android：修复连续发送相同内容消息导致闪退（Key already used：LazyColumn key 改用消息唯一 id）"
   ],
   "apps": {
     "windows": {
@@ -10,8 +10,8 @@
       "file": "Hanser-AI-Wiki-v1.0.10.zip"
     },
     "android": {
-      "version": "0.1.8",
-      "file": "Hanser-AI-Wiki-v0.1.8.apk"
+      "version": "0.1.9",
+      "file": "Hanser-AI-Wiki-v0.1.9.apk"
     }
   }
 }

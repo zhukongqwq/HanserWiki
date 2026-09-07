@@ -16,12 +16,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** 界面消息（含折叠文档信息）。 */
+/** 界面消息（含折叠文档信息）；id 唯一，供 LazyColumn 稳定 key（防相同内容重复导致 Key 冲突崩溃）。 */
 data class UiMessage(
     val role: String,               // user / assistant / system
     val content: String,
     val docs: List<UiDoc> = emptyList(),
-    val keywords: List<String>? = null
+    val keywords: List<String>? = null,
+    val id: Long = 0L               // 唯一 id（追加时分配）
 )
 
 /** 折叠文档（文件名/命中数/摘要）。 */
@@ -44,12 +45,14 @@ class MainViewModel : ViewModel() {
     private val _expandedDocs = MutableStateFlow<UiMessage?>(null)
     val expandedDocs: StateFlow<UiMessage?> = _expandedDocs.asStateFlow()
 
+    private var nextId = 0L
+
     init {
         // 启动加载历史（AppCore 未就绪时跳过，避免未初始化访问）
         val session = if (AppCore.isReady) AppCore.archive.load() else null
         if (session != null && session.messages.isNotEmpty()) {
             _messages.value = session.messages.map {
-                UiMessage(it.role, it.content,
+                UiMessage(role = it.role, content = it.content, id = ++nextId,
                     docs = it.docInfos.map { d -> UiDoc(d.filename, d.hitText.toLongOrNull() ?: 0, d.snippet) },
                     keywords = it.keywords)
             }
@@ -116,7 +119,9 @@ class MainViewModel : ViewModel() {
     }
 
     private fun append(m: UiMessage) {
-        _messages.value = _messages.value + m
+        // 分配唯一 id（防止相同内容消息 key 冲突）
+        val withId = if (m.id == 0L) m.copy(id = ++nextId) else m
+        _messages.value = _messages.value + withId
     }
 
     private fun saveArchive() {
