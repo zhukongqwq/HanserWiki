@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zhukongqwq.hanser.AppCore
+import com.zhukongqwq.hanser.DocImporter
 import com.zhukongqwq.hanser.DocUpdateManager
 import com.zhukongqwq.hanser.DocUpdateService
 import com.zhukongqwq.hanser.MainViewModel
@@ -206,6 +207,23 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
         DocUpdateService.start(context, AppCore.config.loadUpdateUrl())
     }
 
+    // 自定义文件导入（多选 docx；仅新增到文档库，绝不覆盖现有文件）
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (!uris.isNullOrEmpty() && !updateBusy && !reindexRunning && !DocUpdateManager.state.value.running) {
+            updateBusy = true
+            scope.launch(Dispatchers.IO) {
+                val r = DocImporter.import(context, uris)
+                val text = buildString {
+                    appendLine("导入完成：成功 ${r.ok} 个${if (r.errors.isEmpty()) "" else "，失败 ${r.errors.size} 个"}")
+                    if (r.errors.isNotEmpty()) appendLine("失败明细：").append(r.errors.take(3).joinToString("\n"))
+                }
+                withContext(Dispatchers.Main) { updateResult = text; updateBusy = false }
+            }
+        }
+    }
+
     // 重建索引：强制全量重分词（索引队列串行执行），实时进度条 + 完成统计提示
     fun runRebuildIndex() {
         if (reindexRunning || DocUpdateManager.state.value.running) return
@@ -296,6 +314,14 @@ fun ChatScreen(viewModel: MainViewModel = viewModel()) {
                         .imePadding(),
                     verticalAlignment = Alignment.Bottom
                 ) {
+                    // 导入自定义文件（多选 docx）
+                    TextButton(
+                        onClick = { importLauncher.launch(arrayOf(DocImporter.MIME_DOCX)) },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp),
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Text("📄", fontSize = 20.sp)
+                    }
                     OutlinedTextField(
                         value = input,
                         onValueChange = { input = it },

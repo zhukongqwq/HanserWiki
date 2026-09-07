@@ -2,7 +2,7 @@
   "version": "1.0.10",
   "date": "2026-09-07",
   "changelog": [
-    "Android：修复连续发送相同内容消息导致闪退（Key already used：LazyColumn key 改用消息唯一 id）"
+    "Android：新增自定义文件导入（输入栏 📄 按钮，多选 docx 复制进文档库并自动索引；同名不覆盖）"
   ],
   "apps": {
     "windows": {
@@ -10,8 +10,8 @@
       "file": "Hanser-AI-Wiki-v1.0.10.zip"
     },
     "android": {
-      "version": "0.1.9",
-      "file": "Hanser-AI-Wiki-v0.1.9.apk"
+      "version": "0.1.10",
+      "file": "Hanser-AI-Wiki-v0.1.10.apk"
     }
   }
 }
