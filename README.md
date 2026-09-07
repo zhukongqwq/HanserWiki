@@ -6,12 +6,12 @@
 
 ## 双端概览
 
-| | Windows 版 | Android 版 |
-|---|---|---|
-| 技术栈 | C# WPF（.NET 10） | Kotlin + Jetpack Compose（minSdk 26） |
-| 发布产物 | `Hanser-AI-Wiki-v{version}.zip` | `Hanser-AI-Wiki-v{version}.apk` |
-| 数据目录 | exe 所在目录（自包含，随包可移） | 应用私有目录 |
-| 界面风格 | 金色自绘主题 | 与 Windows 同款金色自绘主题 |
+|      | Windows 版                       | Android 版                           |
+| ---- | ------------------------------- | ----------------------------------- |
+| 技术栈  | C# WPF（.NET 10）                 | Kotlin + Jetpack Compose（minSdk 26） |
+| 发布产物 | `Hanser-AI-Wiki-v{version}.zip` | `Hanser-AI-Wiki-v{version}.apk`     |
+| 数据目录 | exe 所在目录（自包含，随包可移）              | 应用私有目录                              |
+| 界面风格 | 金色自绘主题                          | 与 Windows 同款金色自绘主题                  |
 
 两端功能对齐：文档库检索、三 AI 问答流水线、文档更新（list.json 增量）、对话历史、重建索引、软件更新；两端版本号**各自独立**，但发布在**同一个 Release**（`version.json` 双平台段）。
 
@@ -26,12 +26,15 @@
 ## 使用说明
 
 ### 1. 准备文档库
+
 首次运行时文档库为空，用以下任一方式填充：
 
 - **文档更新**（推荐）：从远程更新源增量拉取文档
 - **导入**（Windows 版提供 GUI 导入；Android 版可将 docx 放入应用数据目录）
+- Android 版数据目录在系统根目录的/data/data/文件夹内
 
 ### 2. 配置 AI（问答前必做）
+
 设置 → API 配置（Android 入口：右上「设置」；Windows 入口：设置窗口「API 配置」标签）：
 
 - **全局默认**：OpenAI 兼容接口的 `base_url` / `api_key` / `model`（未填回退环境变量 `OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL`）
@@ -41,7 +44,7 @@
 
 ### 3. 文档更新（增量拉取 docx）
 
-更新源为 GitHub 仓库 Release 上的 `list.json` 清单（`{"data/文件名.docx": "sha256", ...}`），**每次点击都做文件级核对**：只下载缺失或哈希不一致的文件（网络受限可加镜像前缀，如 `https://gh-proxy.com/https://github.com/owner/repo.git`）。
+更新源为 GitHub 仓库 Release 上的 `list.json` 清单（`{"data/文件名.docx": "sha256", ...}`），**每次点击都做文件级核对**：只下载缺失或哈希不一致的文件（网络受限可加镜像前缀，如 `https://gh-proxy.com/https://github.com/owner/repo.git, 或手动下载放入数据目录`）。
 
 - Windows：设置 → 数据与更新 → 仓库地址 → 检查更新
 - Android：设置 → 📥 文档库更新；下载在**前台服务**中执行（通知栏显示进度，可息屏/后台继续；Android 13+ 首次会请求通知权限）
